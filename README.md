@@ -2,7 +2,7 @@
 
 A **multi-agent AI system** built with LangGraph that autonomously finds job listings, analyzes resumes, scores job-candidate fit, tailors resume bullet points, and writes personalized cover letters — powered entirely by free-tier APIs.
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 START → Job Scraper → [conditional] → Resume Analyzer → END
@@ -14,7 +14,7 @@ START → Job Scraper → [conditional] → Resume Analyzer → END
 - **Resume Tailor Agent** (v2) — Rewrites resume bullets to match top jobs
 - **Cover Letter Agent** (v2) — Generates personalized cover letters per job
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Technology | Purpose |
 |-----------|---------|
@@ -26,7 +26,7 @@ START → Job Scraper → [conditional] → Resume Analyzer → END
 | **pypdf** | PDF resume text extraction |
 | **pytest** | Unit testing with mocked HTTP |
 
-## 📦 Setup
+##  Setup
 
 ### 1. Clone and install
 
@@ -80,7 +80,7 @@ streamlit run app.py
 
 Opens at http://localhost:8501
 
-## 🧪 Running Tests
+##  Running Tests
 
 ```bash
 # Run all tests
@@ -93,7 +93,7 @@ pytest tests/ -v --tb=short
 pytest tests/test_job_scraper.py -v
 ```
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 ├── app.py                      # Streamlit UI entry point
@@ -120,13 +120,13 @@ pytest tests/test_job_scraper.py -v
     └── architecture.md         # System design documentation
 ```
 
-## 🚀 Deployment
+##  Deployment
 
 ### Streamlit Cloud (Recommended, Free)
 1. Push repo to GitHub (`.env` is gitignored)
 2. Go to https://share.streamlit.io → "New app" → select your repo
 3. Set `app.py` as entry point
-4. Add API keys in the "Secrets" section
+4. Add API keys in the "Secrets"section
 5. Deploy — get a public URL instantly
 
 ### Railway (Alternative, Free Tier)
@@ -134,7 +134,7 @@ pytest tests/test_job_scraper.py -v
 2. Set start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
 3. Add env vars in Railway dashboard
 
-## 📋 Roadmap
+##  Roadmap
 
 - [x] Job Scraper Agent (3 API sources)
 - [x] Resume Analyzer Agent (LLM extraction)
@@ -144,6 +144,6 @@ pytest tests/test_job_scraper.py -v
 - [ ] Batch mode with LangGraph map-reduce
 - [ ] Job Application Tracker with SQLite
 
-## 📄 License
+##  License
 
 MIT

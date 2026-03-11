@@ -71,7 +71,7 @@ class AgentState(TypedDict, total=False):
 
     User inputs:
         job_title: Search query, e.g. "AI Engineer".
-        location: Target location, e.g. "Remote" or "New York".
+        location: Target location, e.g. "Remote"or "New York".
         num_results: Number of jobs to fetch per source.
         resume_text: Raw text extracted from uploaded PDF.
 

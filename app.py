@@ -18,18 +18,17 @@ from utils.state import AgentState, CandidateProfile, Job
 
 st.set_page_config(
     page_title="Job Application Assistant",
-    page_icon="🤖",
-    layout="wide",
+        layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ── Session State Initialization ─────────────────────────────────────────────
 
-if "pipeline_result" not in st.session_state:
+if "pipeline_result"not in st.session_state:
     st.session_state["pipeline_result"] = None
-if "resume_text" not in st.session_state:
+if "resume_text"not in st.session_state:
     st.session_state["resume_text"] = None
-if "has_run" not in st.session_state:
+if "has_run"not in st.session_state:
     st.session_state["has_run"] = False
 
 
@@ -154,7 +153,7 @@ def get_score_color(score: int) -> str:
         score: Fit score integer 0-100.
 
     Returns:
-        Color name: "green" for ≥70, "orange" for 40-69, "red" for <40.
+        Color name: "green"for ≥70, "orange"for 40-69, "red"for <40.
     """
     if score >= 70:
         return "green"
@@ -166,15 +165,15 @@ def get_score_color(score: int) -> str:
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.header("🧠 Agent Pipeline")
+    st.header("Agent Pipeline")
 
     # Agent status table
     agents_info = [
-        ("🔍 Job Scraper", "Fetches from 3 APIs"),
-        ("📄 Resume Analyzer", "Extracts profile from PDF"),
-        ("📊 Fit Scorer", "Scores job-candidate fit (v2)"),
-        ("✏️ Resume Tailor", "Rewrites resume bullets (v2)"),
-        ("💌 Cover Letter", "Generates cover letters (v2)"),
+        ("Job Scraper", "Fetches from 3 APIs"),
+        ("Resume Analyzer", "Extracts profile from PDF"),
+        ("Fit Scorer", "Scores job-candidate fit (v2)"),
+        ("Resume Tailor", "Rewrites resume bullets (v2)"),
+        ("Cover Letter", "Generates cover letters (v2)"),
     ]
 
     completed = []
@@ -184,16 +183,16 @@ with st.sidebar:
     for agent_name, agent_desc in agents_info:
         agent_key = agent_name.split(" ", 1)[1].lower().replace(" ", "_")
         if agent_key in completed:
-            status = "✅ Complete"
+            status = "Complete"
         else:
-            status = "⏳ Pending"
+            status = "Pending"
         st.markdown(f"**{agent_name}** — {status}")
         st.caption(agent_desc)
 
     st.divider()
 
     # Free APIs section
-    st.subheader("🔗 Free APIs Used")
+    st.subheader("Free APIs Used")
     st.markdown(
         """
     - [Groq](https://console.groq.com) — Free LLM inference
@@ -206,7 +205,7 @@ with st.sidebar:
     st.divider()
 
     # How it works
-    st.subheader("📖 How It Works")
+    st.subheader("How It Works")
     st.markdown(
         """
     1. Enter a job title and location
@@ -222,11 +221,11 @@ with st.sidebar:
 
 # ── Main Area — 4 Tabs ──────────────────────────────────────────────────────
 
-st.title("🤖 Job Application Assistant")
+st.title("Job Application Assistant")
 st.caption("Multi-agent AI system for autonomous job searching and resume analysis")
 
 tab_search, tab_results, tab_tailored, tab_export = st.tabs(
-    ["🔍 Search", "📋 Results", "📝 Tailored Materials (v2)", "📥 Export"]
+    ["Search", "Results", "Tailored Materials (v2)", "Export"]
 )
 
 # ── Tab 1: Search ────────────────────────────────────────────────────────────
@@ -245,7 +244,7 @@ with tab_search:
         location = st.text_input(
             "Location",
             placeholder="Remote, New York, London",
-            help="Enter location or 'Remote' for remote jobs",
+            help="Enter location or 'Remote'for remote jobs",
         )
 
     num_results = st.number_input(
@@ -259,7 +258,7 @@ with tab_search:
     st.divider()
 
     # Resume upload
-    st.subheader("📄 Resume Upload (Optional)")
+    st.subheader("Resume Upload (Optional)")
     uploaded_file = st.file_uploader(
         "Upload your resume for fit scoring (optional)",
         type=["pdf"],
@@ -271,7 +270,7 @@ with tab_search:
             resume_text = extract_pdf_text(uploaded_file)
             st.session_state["resume_text"] = resume_text
             word_count = len(resume_text.split())
-            st.success(f"✅ Resume uploaded successfully! ({word_count} words extracted)")
+            st.success(f"Resume uploaded successfully! ({word_count} words extracted)")
         except Exception as e:
             st.error(f"Failed to extract text from PDF: {str(e)}")
             st.session_state["resume_text"] = None
@@ -279,14 +278,14 @@ with tab_search:
     st.divider()
 
     # Run pipeline button
-    if st.button("🚀 Run Agent Pipeline", type="primary", use_container_width=True):
+    if st.button("Run Agent Pipeline", type="primary", use_container_width=True):
         if not job_title:
             st.warning("Please enter a job title to search.")
         elif not location:
             st.warning("Please enter a location.")
         else:
-            with st.status("🤖 Agents working...", expanded=True) as status:
-                st.write("🔍 Job Scraper Agent — fetching from Adzuna, RemoteOK, Jooble...")
+            with st.status("Agents working...", expanded=True) as status:
+                st.write("Job Scraper Agent — fetching from Adzuna, RemoteOK, Jooble...")
 
                 # Build initial state
                 initial_state: Dict[str, Any] = {
@@ -313,10 +312,10 @@ with tab_search:
                     jobs_data = result.get("jobs", [])
                     job_count = len(jobs_data)
 
-                    st.write(f"✅ Job Scraper complete — found {job_count} jobs")
+                    st.write(f"Job Scraper complete — found {job_count} jobs")
 
                     if result.get("resume_text"):
-                        st.write("📄 Resume Analyzer — extracting profile...")
+                        st.write("Resume Analyzer — extracting profile...")
                         if result.get("candidate_profile"):
                             profile = result["candidate_profile"]
                             if isinstance(profile, CandidateProfile):
@@ -325,22 +324,22 @@ with tab_search:
                                 skill_count = len(profile.get("skills", []))
                             else:
                                 skill_count = 0
-                            st.write(f"✅ Resume Analyzer complete — found {skill_count} skills")
+                            st.write(f"Resume Analyzer complete — found {skill_count} skills")
 
                     st.session_state["pipeline_result"] = result
                     st.session_state["has_run"] = True
 
-                    status.update(label="✅ Pipeline complete!", state="complete")
+                    status.update(label="Pipeline complete!", state="complete")
 
                 except Exception as e:
-                    status.update(label="❌ Pipeline failed", state="error")
+                    status.update(label="Pipeline failed", state="error")
                     st.error(f"Pipeline execution failed: {str(e)}")
 
 # ── Tab 2: Results ───────────────────────────────────────────────────────────
 
 with tab_results:
     if not st.session_state.get("has_run"):
-        st.info("🔍 Run a search first to see results here.")
+        st.info("Run a search first to see results here.")
     else:
         result = st.session_state["pipeline_result"]
 
@@ -357,7 +356,7 @@ with tab_results:
 
         if jobs_list:
             # Filters
-            st.subheader("🔧 Filters")
+            st.subheader("Filters")
             filter_col1, filter_col2, filter_col3 = st.columns(3)
 
             with filter_col1:
@@ -431,7 +430,7 @@ with tab_results:
 
                         tags = job_dict.get("tags", [])
                         if tags:
-                            tag_display = " ".join([f"`{tag}`" for tag in tags[:10]])
+                            tag_display = " ".join([f"`{tag}`"for tag in tags[:10]])
                             st.markdown(f"**Tags:** {tag_display}")
 
                     with right_col:
@@ -467,7 +466,7 @@ with tab_results:
 
 with tab_tailored:
     if not st.session_state.get("has_run"):
-        st.info("🔍 Run a search first to see tailored materials here.")
+        st.info("Run a search first to see tailored materials here.")
     else:
         result = st.session_state.get("pipeline_result")
 
@@ -476,7 +475,7 @@ with tab_tailored:
 
         if not tailored_bullets and not cover_letters:
             st.info(
-                "📝 Tailored materials will be available in v2. "
+                "Tailored materials will be available in v2. "
                 "This feature will rewrite your resume bullets and generate "
                 "personalized cover letters for your top job matches."
             )
@@ -497,19 +496,19 @@ with tab_tailored:
                 with st.expander(f"**{i+1}. {title}** — {company}", expanded=(i == 0)):
                     # Tailored bullets
                     if tailored_bullets and job_id in tailored_bullets:
-                        st.subheader("📌 Tailored Resume Bullets")
+                        st.subheader("Tailored Resume Bullets")
                         bullets = tailored_bullets[job_id]
                         for j, bullet in enumerate(bullets, 1):
                             st.markdown(f"{j}. {bullet}")
-                        if st.button(f"📋 Copy Bullets", key=f"copy_bullets_{job_id}"):
+                        if st.button(f"Copy Bullets", key=f"copy_bullets_{job_id}"):
                             bullet_text = "\n".join(
-                                f"{j}. {b}" for j, b in enumerate(bullets, 1)
+                                f"{j}. {b}"for j, b in enumerate(bullets, 1)
                             )
                             st.code(bullet_text)
 
                     # Cover letter
                     if cover_letters and job_id in cover_letters:
-                        st.subheader("💌 Cover Letter")
+                        st.subheader("Cover Letter")
                         letter = cover_letters[job_id]
                         st.text_area(
                             "Cover Letter",
@@ -518,27 +517,27 @@ with tab_tailored:
                             key=f"cover_letter_{job_id}",
                             label_visibility="collapsed",
                         )
-                        if st.button(f"📋 Copy Letter", key=f"copy_letter_{job_id}"):
+                        if st.button(f"Copy Letter", key=f"copy_letter_{job_id}"):
                             st.code(letter)
 
 # ── Tab 4: Export ────────────────────────────────────────────────────────────
 
 with tab_export:
     if not st.session_state.get("has_run"):
-        st.info("🔍 Run a search first to export results.")
+        st.info("Run a search first to export results.")
     else:
         result = st.session_state.get("pipeline_result")
         jobs_list = result.get("jobs", []) if result else []
 
         if jobs_list:
-            st.subheader("📥 Download Results")
+            st.subheader("Download Results")
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
                 json_data = jobs_to_json(jobs_list)
                 st.download_button(
-                    label="📄 Download Jobs as JSON",
+                    label="Download Jobs as JSON",
                     data=json_data,
                     file_name="jobs.json",
                     mime="application/json",
@@ -548,7 +547,7 @@ with tab_export:
             with col2:
                 csv_data = jobs_to_csv(jobs_list)
                 st.download_button(
-                    label="📊 Download Jobs as CSV",
+                    label="Download Jobs as CSV",
                     data=csv_data,
                     file_name="jobs.csv",
                     mime="text/csv",
@@ -563,7 +562,7 @@ with tab_export:
                         for job_id, letter in cover_letters.items()
                     )
                     st.download_button(
-                        label="💌 Download Cover Letters",
+                        label="Download Cover Letters",
                         data=letters_text,
                         file_name="cover_letters.txt",
                         mime="text/plain",
@@ -571,7 +570,7 @@ with tab_export:
                     )
                 else:
                     st.button(
-                        "💌 Cover Letters (v2)",
+                        "Cover Letters (v2)",
                         disabled=True,
                         use_container_width=True,
                         help="Cover letter export will be available in v2",

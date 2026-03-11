@@ -96,8 +96,8 @@ class TestExtractProfileFromText:
 
                 assert isinstance(profile, CandidateProfile)
                 assert profile.name == "Alice Smith"
-                assert "Python" in profile.skills
-                assert "TensorFlow" in profile.skills
+                assert "Python"in profile.skills
+                assert "TensorFlow"in profile.skills
                 assert len(profile.skills) == 5
                 assert profile.experience_years == 5
 
@@ -147,7 +147,7 @@ class TestResumeAnalyzerAgent:
         result = resume_analyzer_agent(state)
 
         assert result["candidate_profile"] is None
-        assert "resume_analyzer" in result["completed_agents"]
+        assert "resume_analyzer"in result["completed_agents"]
         assert result["active_agent"] is None
 
     def test_skips_when_resume_text_is_empty(self) -> None:
@@ -172,4 +172,4 @@ class TestResumeAnalyzerAgent:
         result = resume_analyzer_agent(state)
 
         assert result["candidate_profile"] is None
-        assert "resume_analyzer" in result["completed_agents"]
+        assert "resume_analyzer"in result["completed_agents"]

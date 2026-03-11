@@ -53,7 +53,7 @@ def fetch_adzuna(job_title: str, location: str, num_results: int) -> List[Dict[s
     app_id = os.getenv("ADZUNA_APP_ID", "")
     app_key = os.getenv("ADZUNA_APP_KEY", "")
 
-    if not app_id or app_id == "your_adzuna_app_id" or not app_key or app_key == "your_adzuna_app_key":
+    if not app_id or app_id == "your_adzuna_app_id"or not app_key or app_key == "your_adzuna_app_key":
         log.warning("adzuna_skipped", reason="ADZUNA_APP_ID or ADZUNA_APP_KEY not configured")
         return []
 
@@ -154,8 +154,8 @@ def fetch_remoteok(job_title: str) -> List[Dict[str, Any]]:
 
         jobs: List[Dict[str, Any]] = []
         for item in data:
-            # Skip legal notice (first element) — check for absence of "position" key
-            if "position" not in item:
+            # Skip legal notice (first element) — check for absence of "position"key
+            if "position"not in item:
                 continue
 
             position = item.get("position", "").lower()
@@ -342,10 +342,10 @@ def job_scraper_agent(state: AgentState) -> AgentState:
 
     # Build summary
     source_detail = ", ".join(
-        f"{name} ({count} jobs)" for name, count in source_counts.items()
+        f"{name} ({count} jobs)"for name, count in source_counts.items()
     )
     scrape_summary = (
-        f"Found {len(jobs)} unique jobs for '{job_title}' in '{location}' "
+        f"Found {len(jobs)} unique jobs for '{job_title}'in '{location}' "
         f"across {len(sources_with_results)} source(s): {', '.join(sources_with_results) if sources_with_results else 'none'}.\n"
         f"Sources: {source_detail}.\n"
         f"{duplicates_removed} duplicates removed."
@@ -355,7 +355,7 @@ def job_scraper_agent(state: AgentState) -> AgentState:
     error = state.get("error")
     if not jobs:
         error = (
-            f"No jobs found for '{job_title}' in '{location}'. "
+            f"No jobs found for '{job_title}'in '{location}'. "
             "This could be due to missing API keys, network issues, or no matching results. "
             "Check your .env configuration and try different search terms."
         )

@@ -66,7 +66,7 @@ class TestFetchRemoteOK:
             assert result[0]["company"] == "Acme Corp"
             assert result[0]["source"] == "remoteok"
             assert result[0]["location"] == "Remote"
-            assert "python" in result[0]["tags"]
+            assert "python"in result[0]["tags"]
 
     def test_fetch_remoteok_no_matches(self) -> None:
         """fetch_remoteok should return empty list when no jobs match keyword."""
@@ -238,10 +238,10 @@ class TestJobScraperAgent:
 
                 result = job_scraper_agent(state)
 
-                assert "jobs" in result
-                assert "raw_jobs" in result
-                assert "scrape_summary" in result
-                assert "job_scraper" in result["completed_agents"]
+                assert "jobs"in result
+                assert "raw_jobs"in result
+                assert "scrape_summary"in result
+                assert "job_scraper"in result["completed_agents"]
                 assert result["active_agent"] is None
 
     def test_agent_handles_all_source_failure(self) -> None:
@@ -276,4 +276,4 @@ class TestJobScraperAgent:
 
                 assert result["error"] is not None
                 assert len(result["jobs"]) == 0
-                assert "job_scraper" in result["completed_agents"]
+                assert "job_scraper"in result["completed_agents"]

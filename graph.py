@@ -18,7 +18,7 @@ def should_run_resume_analyzer(state: AgentState) -> str:
         state: Current pipeline state.
 
     Returns:
-        "resume_analyzer" if resume_text is present, END otherwise.
+        "resume_analyzer"if resume_text is present, END otherwise.
     """
     if state.get("resume_text"):
         return "resume_analyzer"
