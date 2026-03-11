@@ -1,0 +1,23 @@
+{
+    "count": 2,
+    "results": [
+        {
+            "title": "AI Engineer",
+            "company": {"display_name": "TechCorp"},
+            "location": {"display_name": "Remote"},
+            "description": "We are looking for an AI Engineer with experience in machine learning, deep learning, and NLP. Must be proficient in Python, TensorFlow, and PyTorch.",
+            "redirect_url": "https://example.com/jobs/1",
+            "salary_min": 80000,
+            "salary_max": 120000
+        },
+        {
+            "title": "Machine Learning Engineer",
+            "company": {"display_name": "DataInc"},
+            "location": {"display_name": "New York"},
+            "description": "Join our ML team to build production-grade ML pipelines. Experience with AWS, Docker, and Kubernetes required.",
+            "redirect_url": "https://example.com/jobs/2",
+            "salary_min": 90000,
+            "salary_max": 150000
+        }
+    ]
+}
