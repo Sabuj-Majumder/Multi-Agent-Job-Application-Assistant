@@ -54,7 +54,7 @@ JOB:
 CANDIDATE:
 - Skills: {skills}
 - Experience: {experience_years} years
-- Past Titles: {past_titles}
+- Past Titles: {job_titles}
 
 Return ONLY a valid JSON object:
 {{

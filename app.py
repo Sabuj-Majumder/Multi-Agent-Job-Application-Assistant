@@ -146,20 +146,20 @@ def jobs_to_json(jobs: List[Dict[str, Any]]) -> str:
     return json.dumps(serializable, indent=2, default=str)
 
 
-def get_score_color(score: int) -> str:
-    """Get display color for a fit score value.
+def get_score_emoji(score: int) -> str:
+    """Get emoji indicator for a fit score value.
 
     Args:
         score: Fit score integer 0-100.
 
     Returns:
-        Color name: "green"for ≥70, "orange"for 40-69, "red"for <40.
+        Emoji string: \"🟢\" for ≥70, \"🟡\" for 40-69, \"🔴\" for <40.
     """
     if score >= 70:
-        return "green"
+        return "🟢"
     elif score >= 40:
-        return "orange"
-    return "red"
+        return "🟡"
+    return "🔴"
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -326,6 +326,14 @@ with tab_search:
                                 skill_count = 0
                             st.write(f"Resume Analyzer complete — found {skill_count} skills")
 
+                        # Fit Scorer status
+                        if result.get("candidate_profile"):
+                            ranked = result.get("ranked_jobs", [])
+                            if ranked:
+                                st.write(f"Fit Scorer complete — scored {len(ranked)} jobs")
+                            else:
+                                st.write("Fit Scorer — scoring jobs...")
+
                     st.session_state["pipeline_result"] = result
                     st.session_state["has_run"] = True
 
@@ -387,7 +395,7 @@ with tab_results:
                 )
                 if has_scores:
                     min_score = st.slider(
-                        "Minimum fit score",
+                        "Minimum Fit Score",
                         min_value=0,
                         max_value=100,
                         value=0,
@@ -444,11 +452,9 @@ with tab_results:
                     # Fit score display
                     fit_score = job_dict.get("fit_score")
                     if fit_score is not None:
-                        color = get_score_color(fit_score)
+                        emoji = get_score_emoji(fit_score)
+                        st.markdown(f"**Fit Score:** {emoji} {fit_score}/100")
                         st.progress(fit_score / 100)
-                        st.markdown(
-                            f"**Fit Score:** :{color}[{fit_score}/100]"
-                        )
                         reasoning = job_dict.get("fit_reasoning", "")
                         if reasoning:
                             st.caption(reasoning)
