@@ -30,6 +30,8 @@ if "resume_text"not in st.session_state:
     st.session_state["resume_text"] = None
 if "has_run"not in st.session_state:
     st.session_state["has_run"] = False
+if "job_tracker" not in st.session_state:
+    st.session_state["job_tracker"] = {}
 
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
@@ -215,6 +217,16 @@ with st.sidebar:
     )
 
     st.divider()
+
+    tracker_state = st.session_state.get("job_tracker", {})
+    if tracker_state:
+        st.subheader("📌 Tracker Summary")
+        saved_count = sum(1 for status in tracker_state.values() if status == "saved")
+        applied_count = sum(1 for status in tracker_state.values() if status == "applied")
+        rejected_count = sum(1 for status in tracker_state.values() if status == "rejected")
+        st.markdown(f"⭐ Saved: {saved_count} &nbsp; ✅ Applied: {applied_count} &nbsp; ❌ Rejected: {rejected_count}")
+        st.divider()
+
     st.caption("Built with LangGraph · Groq · Streamlit")
     st.caption("[GitHub Repository](#)")
 
@@ -224,8 +236,8 @@ with st.sidebar:
 st.title("Job Application Assistant")
 st.caption("Multi-agent AI system for autonomous job searching and resume analysis")
 
-tab_search, tab_results, tab_tailored, tab_export = st.tabs(
-    ["Search", "Results", "Tailored Materials (v2)", "Export"]
+tab_search, tab_results, tab_tracker, tab_tailored, tab_export = st.tabs(
+    ["Search", "Results", "📌 Tracker", "Tailored Materials (v2)", "Export"]
 )
 
 # ── Tab 1: Search ────────────────────────────────────────────────────────────
@@ -465,10 +477,117 @@ with tab_results:
                         st.markdown(description[:400] + "...")
                     elif description:
                         st.markdown(description)
+
+                    # Tracker Buttons
+                    st.divider()
+                    job_id = job_dict.get("id", "")
+                    status = st.session_state["job_tracker"].get(job_id, "none")
+                    
+                    if status == "saved":
+                        st.markdown("🟡 Saved")
+                    elif status == "applied":
+                        st.markdown("🟢 Applied")
+                    elif status == "rejected":
+                        st.markdown("🔴 Rejected")
+                        
+                    btn_col1, btn_col2, btn_col3, _ = st.columns([1, 1, 1, 3])
+                    with btn_col1:
+                        if st.button("⭐ Save", key=f"save_{job_id}", type="primary" if status == "saved" else "secondary"):
+                            st.session_state["job_tracker"][job_id] = "saved"
+                            st.rerun()
+                    with btn_col2:
+                        if st.button("✅ Applied", key=f"applied_{job_id}", type="primary" if status == "applied" else "secondary"):
+                            st.session_state["job_tracker"][job_id] = "applied"
+                            st.rerun()
+                    with btn_col3:
+                        if st.button("❌ Reject", key=f"reject_{job_id}", type="primary" if status == "rejected" else "secondary"):
+                            st.session_state["job_tracker"][job_id] = "rejected"
+                            st.rerun()
         else:
             st.warning("No jobs found. Try adjusting your search criteria.")
 
-# ── Tab 3: Tailored Materials (v2) ───────────────────────────────────────────
+# ── Tab 3: Tracker ───────────────────────────────────────────────────────────
+
+with tab_tracker:
+    jobs = []
+    if st.session_state.get("pipeline_result"):
+        jobs = st.session_state["pipeline_result"].get("jobs", [])
+        
+    if not jobs:
+        st.info("Run the agent pipeline first to see jobs here.")
+    else:
+        st.subheader("Job Application Tracker")
+        
+        tracker_state = st.session_state["job_tracker"]
+        
+        # Helper to get job by id
+        def get_job_by_id(jid):
+            for j in jobs:
+                if isinstance(j, Job):
+                    if j.id == jid: return j.model_dump()
+                elif isinstance(j, dict):
+                    if j.get("id") == jid: return j
+            return None
+
+        saved_jobs = []
+        applied_jobs = []
+        rejected_jobs = []
+        
+        for jid, status in tracker_state.items():
+            job_data = get_job_by_id(jid)
+            if not job_data: continue
+            if status == "saved": saved_jobs.append(job_data)
+            elif status == "applied": applied_jobs.append(job_data)
+            elif status == "rejected": rejected_jobs.append(job_data)
+            
+        col1, col2, col3 = st.columns(3)
+        col1.metric("⭐ Saved", len(saved_jobs))
+        col2.metric("✅ Applied", len(applied_jobs))
+        col3.metric("❌ Rejected", len(rejected_jobs))
+        
+        st.divider()
+        
+        def render_job_table(jobs_list, empty_msg):
+            if not jobs_list:
+                st.caption(empty_msg)
+                return
+            
+            header_col1, header_col2, header_col3, header_col4, header_col5 = st.columns([3, 2, 2, 1, 1])
+            with header_col1: st.markdown("**Title**")
+            with header_col2: st.markdown("**Company**")
+            with header_col3: st.markdown("**Location**")
+            with header_col4: st.markdown("**Fit Score**")
+            with header_col5: st.markdown("**Action**")
+            
+            st.markdown("---")
+            
+            for j in jobs_list:
+                c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 1, 1])
+                with c1: st.write(j.get("title", ""))
+                with c2: st.write(j.get("company", ""))
+                with c3: st.write(j.get("location", ""))
+                with c4: 
+                    score = j.get("fit_score")
+                    st.write(f"{score}/100" if score is not None else "-")
+                with c5:
+                    url = j.get("url", "")
+                    if url: st.link_button("View →", url)
+        
+        with st.expander("Saved Jobs", expanded=True):
+            render_job_table(saved_jobs, "No jobs in this category yet.")
+            
+        with st.expander("Applied Jobs", expanded=True):
+            render_job_table(applied_jobs, "No jobs in this category yet.")
+            
+        with st.expander("Rejected Jobs", expanded=True):
+            render_job_table(rejected_jobs, "No jobs in this category yet.")
+            
+        st.divider()
+        if st.button("🗑️ Clear All Tracking Data", type="secondary"):
+            st.session_state["job_tracker"] = {}
+            st.rerun()
+
+# ── Tab 4: Tailored Materials (v2) ───────────────────────────────────────────
 
 with tab_tailored:
     if not st.session_state.get("has_run"):
@@ -526,7 +645,7 @@ with tab_tailored:
                         if st.button(f"Copy Letter", key=f"copy_letter_{job_id}"):
                             st.code(letter)
 
-# ── Tab 4: Export ────────────────────────────────────────────────────────────
+# ── Tab 5: Export ────────────────────────────────────────────────────────────
 
 with tab_export:
     if not st.session_state.get("has_run"):
