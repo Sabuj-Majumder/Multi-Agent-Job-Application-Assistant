@@ -74,30 +74,31 @@ Return ONLY the JSON, no explanation, no markdown fences.
 # ── Agent 4: Resume Tailor (v2) ──────────────────────────────────────────────
 
 RESUME_TAILOR_PROMPT: str = """
-You are an expert resume writer. Rewrite the candidate's resume bullet points to better match this specific job.
+You are an expert technical resume writer. Rewrite the candidate's experience as 5 bullet points tailored to this specific job.
 
 JOB:
 - Title: {job_title}
 - Company: {company}
-- Key requirements from description: {description}
+- Description (first 2000 chars): {job_description}
 
 CANDIDATE RESUME TEXT:
 {resume_text}
 
 Instructions:
-- Extract existing bullet points from the resume
-- Rewrite 4-6 bullets to incorporate keywords and skills from the job description
-- NEVER fabricate experience — only rephrase and emphasize existing experience
-- Use strong action verbs and quantify achievements where possible
-- Each bullet should be 1-2 lines maximum
+- Rewrite the candidate's experience into 5 bullet points tailored to this specific job.
+- Use keywords and technologies mentioned in the job description where truthfully applicable.
+- Every bullet must begin with a strong action verb (e.g., Built, Designed, Optimized) and include a measurable outcome where possible.
+- STRICTLY DO NOT invent experience, tools, or achievements not present in the original resume. Base everything strictly on the candidate's actual resume.
+- Each bullet should be a single string.
+- Return ONLY a valid JSON array of 5 strings — no preamble, no explanation, no markdown fences.
 
-Return ONLY a JSON object:
-{{
-  "bullets": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"]
-}}
-
-Return ONLY the JSON, no explanation, no markdown fences.
+Example output:
+[
+  "Engineered a scalable data pipeline using Python and AWS, reducing data processing time by 40%.",
+  "Designed RESTful APIs using Node.js and Express, enabling support for 10M+ daily requests."
+]
 """
+
 
 # ── Agent 5: Cover Letter (v2) ───────────────────────────────────────────────
 

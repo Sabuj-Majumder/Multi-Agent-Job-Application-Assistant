@@ -598,12 +598,8 @@ with tab_tailored:
         tailored_bullets = result.get("tailored_bullets") if result else None
         cover_letters = result.get("cover_letters") if result else None
 
-        if not tailored_bullets and not cover_letters:
-            st.info(
-                "Tailored materials will be available in v2. "
-                "This feature will rewrite your resume bullets and generate "
-                "personalized cover letters for your top job matches."
-            )
+        if not tailored_bullets:
+            st.info("Upload a resume and run the pipeline to generate tailored bullets.")
         else:
             ranked_jobs = result.get("ranked_jobs", [])
             top_jobs = ranked_jobs[:3] if ranked_jobs else []
@@ -618,32 +614,21 @@ with tab_tailored:
                 title = job_dict.get("title", "Unknown")
                 company = job_dict.get("company", "Unknown")
 
-                with st.expander(f"**{i+1}. {title}** — {company}", expanded=(i == 0)):
-                    # Tailored bullets
-                    if tailored_bullets and job_id in tailored_bullets:
-                        st.subheader("Tailored Resume Bullets")
-                        bullets = tailored_bullets[job_id]
+                st.subheader(f"{title} at {company}")
+                
+                if job_id in tailored_bullets:
+                    bullets = tailored_bullets[job_id]
+                    if bullets:
                         for j, bullet in enumerate(bullets, 1):
                             st.markdown(f"{j}. {bullet}")
-                        if st.button(f"Copy Bullets", key=f"copy_bullets_{job_id}"):
-                            bullet_text = "\n".join(
-                                f"{j}. {b}"for j, b in enumerate(bullets, 1)
-                            )
+                        
+                        bullet_text = "\n".join(f"{j}. {b}" for j, b in enumerate(bullets, 1))
+                        if st.button("📋 Copy All Bullets", key=f"copy_{job_id}"):
                             st.code(bullet_text)
-
-                    # Cover letter
-                    if cover_letters and job_id in cover_letters:
-                        st.subheader("Cover Letter")
-                        letter = cover_letters[job_id]
-                        st.text_area(
-                            "Cover Letter",
-                            value=letter,
-                            height=300,
-                            key=f"cover_letter_{job_id}",
-                            label_visibility="collapsed",
-                        )
-                        if st.button(f"Copy Letter", key=f"copy_letter_{job_id}"):
-                            st.code(letter)
+                    else:
+                        st.warning("Failed to generate tailored bullets for this job.")
+                
+            st.caption("⚠️ Review all bullets carefully. Never submit AI-generated content without verifying accuracy.")
 
 # ── Tab 5: Export ────────────────────────────────────────────────────────────
 

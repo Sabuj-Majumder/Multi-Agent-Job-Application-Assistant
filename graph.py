@@ -9,6 +9,7 @@ from langgraph.graph import END, START, StateGraph
 from agents.fit_scorer_agent import fit_scorer_agent
 from agents.job_scraper_agent import job_scraper_agent
 from agents.resume_analyzer_agent import resume_analyzer_agent
+from agents.resume_tailor_agent import resume_tailor_agent
 from utils.state import AgentState
 
 
@@ -40,6 +41,20 @@ def should_run_fit_scorer(state: AgentState) -> str:
     return END
 
 
+def should_run_resume_tailor(state: AgentState) -> str:
+    """Conditional edge: only configure resume tailor if ranked_jobs exist.
+    
+    Args:
+        state: Current pipeline state.
+        
+    Returns:
+        "resume_tailor" if ranked_jobs exists, END otherwise.
+    """
+    if state.get("ranked_jobs"):
+        return "resume_tailor"
+    return END
+
+
 def build_graph() -> StateGraph:
     """Build and compile the LangGraph agent pipeline.
 
@@ -56,12 +71,14 @@ def build_graph() -> StateGraph:
     builder.add_node("job_scraper", job_scraper_agent)
     builder.add_node("resume_analyzer", resume_analyzer_agent)
     builder.add_node("fit_scorer", fit_scorer_agent)
+    builder.add_node("resume_tailor", resume_tailor_agent)
 
     # Wire edges
     builder.add_edge(START, "job_scraper")
     builder.add_conditional_edges("job_scraper", should_run_resume_analyzer)
     builder.add_conditional_edges("resume_analyzer", should_run_fit_scorer)
-    builder.add_edge("fit_scorer", END)
+    builder.add_conditional_edges("fit_scorer", should_run_resume_tailor)
+    builder.add_edge("resume_tailor", END)
 
     return builder.compile()
 
