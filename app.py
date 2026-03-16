@@ -6,6 +6,7 @@ Run with: streamlit run app.py
 import csv
 import io
 import json
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
@@ -35,6 +36,75 @@ if "job_tracker" not in st.session_state:
 
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
+
+
+def filter_by_date(jobs, date_filter):
+    """
+    Filters jobs by how recently they were posted.
+    Jobs without a date field are always included when filter is 'Any time',
+    but excluded for all other filter values since we cannot verify recency.
+    """
+    if date_filter == "Any time":
+        return jobs
+
+    cutoff_map = {
+        "Past 24 hours": timedelta(days=1),
+        "Past 3 days":   timedelta(days=3),
+        "Past week":     timedelta(days=7),
+        "Past 2 weeks":  timedelta(days=14),
+        "Past month":    timedelta(days=30),
+    }
+    cutoff = datetime.now(timezone.utc) - cutoff_map[date_filter]
+    filtered = []
+    for job in jobs:
+        posted_at = getattr(job, "posted_at", None)
+        if posted_at is None:
+            # Fallback for dictionaries since jobs can be dicts or Job objects here
+            if isinstance(job, dict):
+                posted_at = job.get("posted_at")
+            if posted_at is None:
+                continue   # exclude undated jobs when a filter is active
+        try:
+            if isinstance(posted_at, str):
+                # Handle ISO format strings with or without timezone
+                posted_dt = datetime.fromisoformat(
+                    posted_at.replace("Z", "+00:00")
+                )
+            else:
+                posted_dt = posted_at
+            # Make naive datetimes timezone-aware (assume UTC)
+            if posted_dt.tzinfo is None:
+                posted_dt = posted_dt.replace(tzinfo=timezone.utc)
+            if posted_dt >= cutoff:
+                filtered.append(job)
+        except (ValueError, TypeError):
+            continue   # skip jobs with unparseable dates
+    return filtered
+
+
+def human_readable_date(posted_at_str):
+    """Convert ISO date string to friendly relative label."""
+    if not posted_at_str:
+        return "Date unknown"
+    try:
+        posted_dt = datetime.fromisoformat(posted_at_str.replace("Z", "+00:00"))
+        if posted_dt.tzinfo is None:
+            posted_dt = posted_dt.replace(tzinfo=timezone.utc)
+        delta = datetime.now(timezone.utc) - posted_dt
+        if delta.days == 0:
+            return "Posted today"
+        elif delta.days == 1:
+            return "Posted yesterday"
+        elif delta.days <= 7:
+            return f"Posted {delta.days} days ago"
+        elif delta.days <= 30:
+            weeks = delta.days // 7
+            return f"Posted {weeks} week{'s' if weeks > 1 else ''} ago"
+        else:
+            months = delta.days // 30
+            return f"Posted {months} month{'s' if months > 1 else ''} ago"
+    except (ValueError, TypeError):
+        return "Date unknown"
 
 
 def extract_pdf_text(uploaded_file: Any) -> str:
@@ -198,9 +268,9 @@ with st.sidebar:
     st.markdown(
         """
     - [Groq](https://console.groq.com) — Free LLM inference
-    - [Adzuna](https://developer.adzuna.com) — Job listings (free tier)
+    - The Muse (themuse.com/api) — no key needed
     - [RemoteOK](https://remoteok.com/api) — Remote jobs (no key needed)
-    - [Jooble](https://jooble.org/api/index) — Job aggregation (free tier)
+    - Arbeitnow (arbeitnow.com/api) — no key needed
     """
     )
 
@@ -258,6 +328,12 @@ with tab_search:
             placeholder="Remote, New York, London",
             help="Enter location or 'Remote'for remote jobs",
         )
+        date_posted = st.selectbox(
+            "Date Posted",
+            options=["Any time", "Past 24 hours", "Past 3 days", "Past week", "Past 2 weeks", "Past month"],
+            index=0,
+            key="date_posted_filter"
+        )
 
     num_results = st.number_input(
         "Results per source",
@@ -297,13 +373,14 @@ with tab_search:
             st.warning("Please enter a location.")
         else:
             with st.status("Agents working...", expanded=True) as status:
-                st.write("Job Scraper Agent — fetching from Adzuna, RemoteOK, Jooble...")
+                st.write("Job Scraper Agent — fetching from RemoteOK, The Muse, Arbeitnow...")
 
                 # Build initial state
                 initial_state: Dict[str, Any] = {
                     "job_title": job_title,
                     "location": location,
                     "num_results": int(num_results),
+                    "date_filter": date_posted,
                     "resume_text": st.session_state.get("resume_text"),
                     "raw_jobs": [],
                     "jobs": [],
@@ -424,6 +501,14 @@ with tab_results:
                 min_score=min_score,
             )
 
+            filtered_jobs = filter_by_date(filtered_jobs, st.session_state.get("date_posted_filter", "Any time"))
+
+            if not filtered_jobs and jobs_list:
+                st.warning(
+                    f"No jobs found for the selected date filter: **{st.session_state.get('date_posted_filter')}**. "
+                    "Try a wider date range or select 'Any time'."
+                )
+
             st.caption(f"Showing {len(filtered_jobs)} of {len(jobs_list)} jobs")
 
             # Job cards
@@ -456,6 +541,8 @@ with tab_results:
                     with right_col:
                         source = job_dict.get("source", "unknown")
                         st.markdown(f"**Source:** `{source}`")
+                        
+                        st.caption(f"🕐 {human_readable_date(job_dict.get('posted_at'))}")
 
                         url = job_dict.get("url", "")
                         if url:

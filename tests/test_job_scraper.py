@@ -2,10 +2,9 @@
 
 Test cases:
 1. fetch_remoteok returns correct structure with mocked HTTP
-2. fetch_adzuna gracefully skips when env key is missing
-3. deduplicate correctly removes jobs with same title+company
-4. job_scraper_agent node writes correct keys to state
-5. job_scraper_agent handles all-source failure gracefully
+2. deduplicate correctly removes jobs with same title+company
+3. job_scraper_agent node writes correct keys to state
+4. job_scraper_agent handles all-source failure gracefully
 """
 
 import json
@@ -16,9 +15,9 @@ import pytest
 
 from agents.job_scraper_agent import (
     deduplicate_jobs,
-    fetch_adzuna,
-    fetch_jooble,
+    fetch_arbeitnow,
     fetch_remoteok,
+    fetch_themuse,
     job_scraper_agent,
 )
 from utils.state import AgentState
@@ -106,66 +105,16 @@ class TestFetchRemoteOK:
             assert result == []
 
 
-class TestFetchAdzuna:
-    """Tests for the Adzuna API fetcher."""
-
-    def test_fetch_adzuna_skips_when_key_missing(self) -> None:
-        """fetch_adzuna should gracefully skip when env key is missing."""
-        with patch.dict(os.environ, {"ADZUNA_APP_ID": "", "ADZUNA_APP_KEY": ""}, clear=False):
-            result = fetch_adzuna("AI Engineer", "Remote", 10)
-            assert result == []
-
-    def test_fetch_adzuna_skips_placeholder_key(self) -> None:
-        """fetch_adzuna should skip when env key is still the placeholder."""
-        with patch.dict(
-            os.environ,
-            {"ADZUNA_APP_ID": "your_adzuna_app_id", "ADZUNA_APP_KEY": "your_adzuna_app_key"},
-            clear=False,
-        ):
-            result = fetch_adzuna("AI Engineer", "Remote", 10)
-            assert result == []
-
-    def test_fetch_adzuna_success(self) -> None:
-        """fetch_adzuna should return correctly parsed jobs on success."""
-        # Load mock response
-        fixtures_path = os.path.join(os.path.dirname(__file__), "fixtures", "mock_adzuna_response.json")
-        with open(fixtures_path) as f:
-            mock_data = json.load(f)
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_data
-        mock_response.raise_for_status.return_value = None
-
-        with patch.dict(
-            os.environ,
-            {"ADZUNA_APP_ID": "test_id", "ADZUNA_APP_KEY": "test_key"},
-            clear=False,
-        ):
-            with patch("agents.job_scraper_agent.requests.Session") as MockSession:
-                mock_session = MagicMock()
-                mock_session.get.return_value = mock_response
-                MockSession.return_value = mock_session
-
-                result = fetch_adzuna("AI Engineer", "Remote", 10)
-
-                assert len(result) == 2
-                assert result[0]["title"] == "AI Engineer"
-                assert result[0]["company"] == "TechCorp"
-                assert result[0]["source"] == "adzuna"
-                assert result[0]["salary"] == "$80,000 – $120,000"
-
-
 class TestDeduplication:
     """Tests for job deduplication logic."""
 
     def test_deduplicate_removes_duplicates(self) -> None:
         """deduplicate should remove jobs with same title+company (case-insensitive)."""
         jobs = [
-            {"title": "AI Engineer", "company": "TechCorp", "source": "adzuna"},
+            {"title": "AI Engineer", "company": "TechCorp", "source": "themuse"},
             {"title": "ai engineer", "company": "techcorp", "source": "remoteok"},
-            {"title": "Data Scientist", "company": "DataCo", "source": "jooble"},
-            {"title": "AI Engineer", "company": "OtherCo", "source": "adzuna"},
+            {"title": "Data Scientist", "company": "DataCo", "source": "arbeitnow"},
+            {"title": "AI Engineer", "company": "OtherCo", "source": "themuse"},
         ]
 
         unique_jobs, duplicates_removed = deduplicate_jobs(jobs)
@@ -176,8 +125,8 @@ class TestDeduplication:
     def test_deduplicate_no_duplicates(self) -> None:
         """deduplicate should return all jobs when no duplicates exist."""
         jobs = [
-            {"title": "AI Engineer", "company": "TechCorp", "source": "adzuna"},
-            {"title": "Data Scientist", "company": "DataCo", "source": "jooble"},
+            {"title": "AI Engineer", "company": "TechCorp", "source": "themuse"},
+            {"title": "Data Scientist", "company": "DataCo", "source": "arbeitnow"},
         ]
 
         unique_jobs, duplicates_removed = deduplicate_jobs(jobs)
@@ -229,20 +178,18 @@ class TestJobScraperAgent:
             "completed_agents": [],
         }
 
-        with patch.dict(os.environ, {"ADZUNA_APP_ID": "", "JOOBLE_API_KEY": ""}, clear=False):
-            with patch("agents.job_scraper_agent.requests.Session") as MockSession:
-                mock_session = MagicMock()
-                mock_session.get.return_value = mock_response
-                mock_session.post.return_value = mock_response
-                MockSession.return_value = mock_session
+        with patch("agents.job_scraper_agent.requests.Session") as MockSession:
+            mock_session = MagicMock()
+            mock_session.get.return_value = mock_response
+            MockSession.return_value = mock_session
 
-                result = job_scraper_agent(state)
+            result = job_scraper_agent(state)
 
-                assert "jobs"in result
-                assert "raw_jobs"in result
-                assert "scrape_summary"in result
-                assert "job_scraper"in result["completed_agents"]
-                assert result["active_agent"] is None
+            assert "jobs"in result
+            assert "raw_jobs"in result
+            assert "scrape_summary"in result
+            assert "job_scraper"in result["completed_agents"]
+            assert result["active_agent"] is None
 
     def test_agent_handles_all_source_failure(self) -> None:
         """job_scraper_agent should set error when all sources fail."""
@@ -265,15 +212,13 @@ class TestJobScraperAgent:
             "completed_agents": [],
         }
 
-        with patch.dict(os.environ, {"ADZUNA_APP_ID": "", "JOOBLE_API_KEY": ""}, clear=False):
-            with patch("agents.job_scraper_agent.requests.Session") as MockSession:
-                mock_session = MagicMock()
-                mock_session.get.side_effect = req_lib.exceptions.Timeout("timeout")
-                mock_session.post.side_effect = req_lib.exceptions.Timeout("timeout")
-                MockSession.return_value = mock_session
+        with patch("agents.job_scraper_agent.requests.Session") as MockSession:
+            mock_session = MagicMock()
+            mock_session.get.side_effect = req_lib.exceptions.Timeout("timeout")
+            MockSession.return_value = mock_session
 
-                result = job_scraper_agent(state)
+            result = job_scraper_agent(state)
 
-                assert result["error"] is not None
-                assert len(result["jobs"]) == 0
-                assert "job_scraper"in result["completed_agents"]
+            assert result["error"] is not None
+            assert len(result["jobs"]) == 0
+            assert "job_scraper"in result["completed_agents"]

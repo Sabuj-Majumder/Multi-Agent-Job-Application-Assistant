@@ -1,4 +1,4 @@
-"""Job Scraper Agent — fetches and deduplicates listings from Adzuna, RemoteOK, and Jooble.
+"""Job Scraper Agent — fetches and deduplicates listings from RemoteOK, The Muse, and Arbeitnow.
 
 LangGraph node name: "job_scraper"
 Reads from state: job_title, location, num_results
@@ -7,8 +7,10 @@ Does NOT use LLM — pure API calls and data transformation.
 """
 
 import os
+import re
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 import requests
@@ -39,33 +41,17 @@ def _sanitize_query(text: str) -> str:
     return clean.strip()[:100]
 
 
-def fetch_adzuna(job_title: str, location: str, num_results: int) -> List[Dict[str, Any]]:
-    """Fetch job listings from the Adzuna API.
+def fetch_themuse(job_title: str) -> List[Dict[str, Any]]:
+    """Fetch job listings from The Muse API.
 
     Args:
-        job_title: Job title search query.
-        location: Target location for job search.
-        num_results: Maximum number of results to fetch.
+        job_title: Job title search query for keyword filtering.
 
     Returns:
         List of normalized job dictionaries. Empty list on failure.
     """
-    app_id = os.getenv("ADZUNA_APP_ID", "")
-    app_key = os.getenv("ADZUNA_APP_KEY", "")
-
-    if not app_id or app_id == "your_adzuna_app_id"or not app_key or app_key == "your_adzuna_app_key":
-        log.warning("adzuna_skipped", reason="ADZUNA_APP_ID or ADZUNA_APP_KEY not configured")
-        return []
-
-    country = os.getenv("ADZUNA_COUNTRY", "us")
-    url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
-    params = {
-        "app_id": app_id,
-        "app_key": app_key,
-        "what": _sanitize_query(job_title),
-        "where": _sanitize_query(location),
-        "results_per_page": min(num_results, MAX_JOBS_PER_SOURCE),
-    }
+    url = "https://www.themuse.com/api/public/jobs"
+    params = {"page": 1}
 
     try:
         session = requests.Session()
@@ -73,52 +59,66 @@ def fetch_adzuna(job_title: str, location: str, num_results: int) -> List[Dict[s
         resp = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
 
         if resp.status_code >= 500:
-            log.error("api_call_failed", source="adzuna", error="Server error", status_code=resp.status_code)
+            log.error("api_call_failed", source="themuse", error="Server error", status_code=resp.status_code)
             return []
 
         if resp.status_code >= 400:
-            log.error("api_call_failed", source="adzuna", error=resp.text[:200], status_code=resp.status_code)
+            log.error("api_call_failed", source="themuse", error=resp.text[:200], status_code=resp.status_code)
             return []
 
         resp.raise_for_status()
         data = resp.json()
         results = data.get("results", [])
 
+        keywords = [w.lower() for w in _sanitize_query(job_title).split()]
+
         jobs: List[Dict[str, Any]] = []
         for item in results:
-            salary = None
-            sal_min = item.get("salary_min")
-            sal_max = item.get("salary_max")
-            if sal_min and sal_max:
-                salary = f"${int(sal_min):,} – ${int(sal_max):,}"
-            elif sal_min:
-                salary = f"${int(sal_min):,}+"
-            elif sal_max:
-                salary = f"Up to ${int(sal_max):,}"
+            name = item.get("name", "")
+            if not any(kw in name.lower() for kw in keywords):
+                continue
+
+            locations = item.get("locations", [])
+            location = locations[0].get("name") if locations else "Remote"
+
+            contents = item.get("contents", "")
+            description = re.sub(r'<[^>]+>', '', contents)
+
+            tags = []
+            levels = item.get("levels", [])
+            if levels:
+                tags.append(levels[0].get("name"))
+            categories = item.get("categories", [])
+            if categories:
+                tags.append(categories[0].get("name"))
 
             jobs.append({
                 "id": str(uuid.uuid4()),
-                "title": item.get("title", "Unknown"),
-                "company": item.get("company", {}).get("display_name", "Unknown"),
-                "location": item.get("location", {}).get("display_name", "Unknown"),
-                "description": (item.get("description", "")[:3000]),
-                "url": item.get("redirect_url", ""),
-                "source": "adzuna",
-                "salary": salary,
-                "tags": [],
+                "title": name or "Unknown",
+                "company": item.get("company", {}).get("name", "Unknown"),
+                "location": location,
+                "description": description[:3000],
+                "url": item.get("refs", {}).get("landing_page", ""),
+                "source": "themuse",
+                "salary": None,
+                "tags": [t for t in tags if t],
+                "posted_at": item.get("publication_date"),
             })
 
-        log.info("api_call", source="adzuna", status="success", jobs_returned=len(jobs))
+            if len(jobs) >= MAX_JOBS_PER_SOURCE:
+                break
+
+        log.info("api_call", source="themuse", status="success", jobs_returned=len(jobs))
         return jobs
 
     except requests.exceptions.Timeout:
-        log.warning("api_call_failed", source="adzuna", error="Request timed out")
+        log.warning("api_call_failed", source="themuse", error="Request timed out")
         return []
     except requests.exceptions.RequestException as e:
-        log.error("api_call_failed", source="adzuna", error=str(e))
+        log.error("api_call_failed", source="themuse", error=str(e))
         return []
     except Exception as e:
-        log.error("api_call_failed", source="adzuna", error=str(e))
+        log.error("api_call_failed", source="themuse", error=str(e))
         return []
 
 
@@ -176,6 +176,7 @@ def fetch_remoteok(job_title: str) -> List[Dict[str, Any]]:
                 "source": "remoteok",
                 "salary": item.get("salary") if item.get("salary") else None,
                 "tags": item.get("tags", []),
+                "posted_at": item.get("date"),
             })
 
             if len(jobs) >= MAX_JOBS_PER_SOURCE:
@@ -195,72 +196,86 @@ def fetch_remoteok(job_title: str) -> List[Dict[str, Any]]:
         return []
 
 
-def fetch_jooble(job_title: str, location: str, num_results: int) -> List[Dict[str, Any]]:
-    """Fetch job listings from the Jooble API.
+def fetch_arbeitnow(job_title: str) -> List[Dict[str, Any]]:
+    """Fetch job listings from the Arbeitnow API.
 
     Args:
-        job_title: Job title search query.
-        location: Target location for job search.
-        num_results: Maximum number of results to fetch.
+        job_title: Job title search query for keyword filtering.
 
     Returns:
         List of normalized job dictionaries. Empty list on failure.
     """
-    api_key = os.getenv("JOOBLE_API_KEY", "")
-
-    if not api_key or api_key == "your_jooble_api_key":
-        log.warning("jooble_skipped", reason="JOOBLE_API_KEY not configured")
-        return []
-
-    url = f"https://jooble.org/api/{api_key}"
-    payload = {
-        "keywords": _sanitize_query(job_title),
-        "location": _sanitize_query(location),
-        "resultonpage": min(num_results, MAX_JOBS_PER_SOURCE),
-    }
+    url = "https://arbeitnow.com/api/job-board-api"
+    params = {"page": 1}
 
     try:
         session = requests.Session()
         session.headers.update({"User-Agent": USER_AGENT})
-        resp = session.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+        resp = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
 
         if resp.status_code >= 500:
-            log.error("api_call_failed", source="jooble", error="Server error", status_code=resp.status_code)
+            log.error("api_call_failed", source="arbeitnow", error="Server error", status_code=resp.status_code)
             return []
 
         if resp.status_code >= 400:
-            log.error("api_call_failed", source="jooble", error=resp.text[:200], status_code=resp.status_code)
+            log.error("api_call_failed", source="arbeitnow", error=resp.text[:200], status_code=resp.status_code)
             return []
 
         resp.raise_for_status()
         data = resp.json()
-        results = data.get("jobs", [])
+        results = data.get("data", [])
+
+        keywords = [w.lower() for w in _sanitize_query(job_title).split()]
 
         jobs: List[Dict[str, Any]] = []
         for item in results:
+            title = item.get("title", "")
+            tags_list = [t.lower() for t in item.get("tags", [])]
+            tag_str = " ".join(tags_list)
+
+            if not any(kw in title.lower() or kw in tag_str for kw in keywords):
+                continue
+
+            description_raw = item.get("description", "")
+            description = re.sub(r'<[^>]+>', '', description_raw)
+
+            location = item.get("location", "Unknown")
+            if item.get("remote"):
+                location = "Remote"
+
+            created_at = item.get("created_at")
+            if created_at is not None:
+                posted_at = datetime.fromtimestamp(created_at, tz=timezone.utc).isoformat()
+            else:
+                posted_at = None
+
             jobs.append({
                 "id": str(uuid.uuid4()),
-                "title": item.get("title", "Unknown"),
-                "company": item.get("company", "Unknown"),
-                "location": item.get("location", "Unknown"),
-                "description": (item.get("snippet", "")[:3000]),
-                "url": item.get("link", ""),
-                "source": "jooble",
-                "salary": item.get("salary") if item.get("salary") else None,
-                "tags": [],
+                "title": title or "Unknown",
+                "company": item.get("company_name", "Unknown"),
+                "location": location,
+                "description": description[:3000],
+                "url": item.get("url", ""),
+                "source": "arbeitnow",
+                "salary": None,
+                "tags": item.get("tags", []),
+                "posted_at": posted_at,
             })
 
-        log.info("api_call", source="jooble", status="success", jobs_returned=len(jobs))
+            if len(jobs) >= MAX_JOBS_PER_SOURCE:
+                break
+
+        log.info("api_call", source="arbeitnow", status="success", jobs_returned=len(jobs))
         return jobs
 
     except requests.exceptions.Timeout:
-        log.warning("api_call_failed", source="jooble", error="Request timed out")
+        log.warning("api_call_failed", source="arbeitnow", error="Request timed out")
         return []
     except requests.exceptions.RequestException as e:
-        log.error("api_call_failed", source="jooble", error=str(e))
+        log.error("api_call_failed", source="arbeitnow", error=str(e))
         return []
     except Exception as e:
-        log.error("api_call_failed", source="jooble", error=str(e))
+        log.error("api_call_failed", source="arbeitnow", error=str(e))
         return []
 
 
@@ -292,8 +307,8 @@ def deduplicate_jobs(jobs: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], 
 def job_scraper_agent(state: AgentState) -> AgentState:
     """LangGraph node: fetches jobs from 3 APIs, deduplicates, and updates state.
 
-    Reads job_title, location, and num_results from state. Queries Adzuna,
-    RemoteOK, and Jooble in sequence. Each source is wrapped in its own
+    Reads job_title, location, and num_results from state. Queries RemoteOK,
+    The Muse, and Arbeitnow in sequence. Each source is wrapped in its own
     error handler — a failure in one source does not stop the others.
 
     Args:
@@ -310,12 +325,12 @@ def job_scraper_agent(state: AgentState) -> AgentState:
     log.info("agent_started", agent="job_scraper", job_title=job_title, location=location)
 
     # Fetch from all 3 sources independently
-    adzuna_jobs = fetch_adzuna(job_title, location, num_results)
     remoteok_jobs = fetch_remoteok(job_title)
-    jooble_jobs = fetch_jooble(job_title, location, num_results)
+    themuse_jobs = fetch_themuse(job_title)
+    arbeitnow_jobs = fetch_arbeitnow(job_title)
 
     # Combine all raw results
-    all_raw_jobs = adzuna_jobs + remoteok_jobs + jooble_jobs
+    all_raw_jobs = remoteok_jobs + themuse_jobs + arbeitnow_jobs
 
     # Deduplicate
     unique_job_dicts, duplicates_removed = deduplicate_jobs(all_raw_jobs)
@@ -332,9 +347,9 @@ def job_scraper_agent(state: AgentState) -> AgentState:
     # Count sources that returned results
     sources_with_results: List[str] = []
     source_counts: Dict[str, int] = {
-        "Adzuna": len(adzuna_jobs),
         "RemoteOK": len(remoteok_jobs),
-        "Jooble": len(jooble_jobs),
+        "The Muse": len(themuse_jobs),
+        "Arbeitnow": len(arbeitnow_jobs),
     }
     for source_name, count in source_counts.items():
         if count > 0:

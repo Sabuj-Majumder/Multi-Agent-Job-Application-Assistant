@@ -26,7 +26,7 @@ def test_resume_tailor_skips_when_profile_missing():
                 location="Remote",
                 description="Python developer",
                 url="http://example.com/1",
-                source="adzuna",
+                source="themuse",
                 tags=["python"],
                 fit_score=95,
             )
@@ -79,7 +79,7 @@ def test_resume_tailor_parses_json_correctly(mock_get_llm):
                     location="Remote",
                     description="Python developer",
                     url="http://example.com/1",
-                    source="adzuna",
+                    source="themuse",
                     fit_score=95,
                 )
             ],
@@ -128,7 +128,7 @@ def test_resume_tailor_handles_malformed_json(mock_get_llm):
                     location="Remote",
                     description="Python developer",
                     url="http://example.com/1",
-                    source="adzuna",
+                    source="themuse",
                     fit_score=95,
                 )
             ],

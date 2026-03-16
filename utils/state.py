@@ -20,7 +20,7 @@ class Job(BaseModel):
         location: Location string (may be "Remote").
         description: Full job description text.
         url: Direct link to job posting.
-        source: Origin API — "adzuna", "remoteok", or "jooble".
+        source: Origin API — "remoteok", "themuse", or "arbeitnow".
         salary: Formatted salary range string, e.g. "$80,000 – $120,000".
         tags: Tech stack tags, e.g. ["python", "aws", "docker"].
         fit_score: 0–100, filled by Fit Scorer Agent (v2).
@@ -38,6 +38,7 @@ class Job(BaseModel):
     tags: List[str] = Field(default_factory=list)
     fit_score: Optional[int] = Field(default=None, ge=0, le=100)
     fit_reasoning: Optional[str] = None
+    posted_at: Optional[str] = None   # ISO 8601 datetime string e.g. "2024-01-15T10:30:00Z"
 
 
 class CandidateProfile(BaseModel):
@@ -95,6 +96,7 @@ class AgentState(TypedDict, total=False):
     location: str
     num_results: int
     resume_text: Optional[str]
+    date_filter: str  # e.g. "Any time" | "Past 24 hours" | "Past 3 days" | "Past week" | "Past 2 weeks" | "Past month"
 
     # Agent outputs
     raw_jobs: List[dict]

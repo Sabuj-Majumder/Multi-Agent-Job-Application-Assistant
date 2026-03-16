@@ -44,9 +44,8 @@ This project implements a **multi-agent AI pipeline** using LangGraph that auton
 
 | API       | Purpose                    | Auth Required |
 |-----------|----------------------------|---------------|
-| Adzuna    | Job listings (global)      | Yes (free)    |
-| RemoteOK  | Remote job listings        | No            |
-| Jooble    | Job aggregation            | Yes (free)    |
+| The Muse  | Job aggregation            | Yes (free)    |
+| Arbeitnow | Job aggregation            | Yes (free)    |
 | Groq      | LLM inference (LLaMA 3.3) | Yes (free)    |
 
 ## Tech Stack

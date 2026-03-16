@@ -8,7 +8,7 @@ A **multi-agent AI system** built with LangGraph that autonomously finds job lis
 START → Job Scraper → [conditional] → Resume Analyzer → END
 ```
 
-- **Job Scraper Agent** — Fetches from 3 free job APIs (Adzuna, RemoteOK, Jooble), normalizes and deduplicates results
+- **Job Scraper Agent** — Fetches from 3 free job APIs (RemoteOK, The Muse, Arbeitnow), normalizes and deduplicates results
 - **Resume Analyzer Agent** — Extracts structured candidate profile from uploaded PDF using LLM
 - **Fit Scorer Agent** (v2) — Scores each job 0–100 against candidate profile
 - **Resume Tailor Agent** (v2) — Rewrites resume bullets to match top jobs
@@ -57,17 +57,11 @@ Edit `.env` with your API keys:
 3. Create an API key
 4. Paste into `GROQ_API_KEY` in `.env`
 
-#### Adzuna (Optional — free, instant approval)
-1. Go to https://developer.adzuna.com
-2. Register for an account
-3. Copy your App ID and App Key
-4. Paste into `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` in `.env`
+#### The Muse (No Key Needed)
+Works immediately.
 
-#### Jooble (Optional — free)
-1. Go to https://jooble.org/api/index
-2. Register for API access
-3. Copy your API key
-4. Paste into `JOOBLE_API_KEY` in `.env`
+#### Arbeitnow (No Key Needed)
+Works immediately.
 
 #### RemoteOK
 No API key needed! Works immediately.

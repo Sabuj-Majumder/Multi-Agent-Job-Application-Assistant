@@ -24,7 +24,7 @@ class TestJob:
             location="Remote",
             description="Build AI systems",
             url="https://example.com/job/1",
-            source="adzuna",
+            source="themuse",
             salary="$80,000 – $120,000",
             tags=["python", "ml", "aws"],
             fit_score=85,
@@ -32,7 +32,7 @@ class TestJob:
         )
         assert job.title == "AI Engineer"
         assert job.company == "TechCorp"
-        assert job.source == "adzuna"
+        assert job.source == "themuse"
         assert job.fit_score == 85
         assert len(job.tags) == 3
 
@@ -62,7 +62,7 @@ class TestJob:
                 location="Test",
                 description="Test",
                 url="https://example.com",
-                source="adzuna",
+                source="themuse",
                 fit_score=101,
             )
 
@@ -76,7 +76,7 @@ class TestJob:
                 location="Test",
                 description="Test",
                 url="https://example.com",
-                source="adzuna",
+                source="themuse",
                 fit_score=-1,
             )
 
@@ -89,7 +89,7 @@ class TestJob:
             location="Test",
             description="Test",
             url="https://example.com",
-            source="adzuna",
+            source="themuse",
             fit_score=0,
         )
         assert job_zero.fit_score == 0
@@ -101,7 +101,7 @@ class TestJob:
             location="Test",
             description="Test",
             url="https://example.com",
-            source="adzuna",
+            source="themuse",
             fit_score=100,
         )
         assert job_hundred.fit_score == 100
