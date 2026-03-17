@@ -10,6 +10,7 @@ from agents.fit_scorer_agent import fit_scorer_agent
 from agents.job_scraper_agent import job_scraper_agent
 from agents.resume_analyzer_agent import resume_analyzer_agent
 from agents.resume_tailor_agent import resume_tailor_agent
+from agents.cover_letter_agent import cover_letter_agent
 from utils.state import AgentState
 
 
@@ -55,6 +56,20 @@ def should_run_resume_tailor(state: AgentState) -> str:
     return END
 
 
+def should_run_cover_letter(state: AgentState) -> str:
+    """Conditional edge: only write cover letter if tailored_bullets exist.
+    
+    Args:
+        state: Current pipeline state.
+        
+    Returns:
+        "cover_letter" if tailored_bullets exists, END otherwise.
+    """
+    if state.get("tailored_bullets"):
+        return "cover_letter"
+    return END
+
+
 def build_graph() -> StateGraph:
     """Build and compile the LangGraph agent pipeline.
 
@@ -72,13 +87,15 @@ def build_graph() -> StateGraph:
     builder.add_node("resume_analyzer", resume_analyzer_agent)
     builder.add_node("fit_scorer", fit_scorer_agent)
     builder.add_node("resume_tailor", resume_tailor_agent)
+    builder.add_node("cover_letter", cover_letter_agent)
 
     # Wire edges
     builder.add_edge(START, "job_scraper")
     builder.add_conditional_edges("job_scraper", should_run_resume_analyzer)
     builder.add_conditional_edges("resume_analyzer", should_run_fit_scorer)
     builder.add_conditional_edges("fit_scorer", should_run_resume_tailor)
-    builder.add_edge("resume_tailor", END)
+    builder.add_conditional_edges("resume_tailor", should_run_cover_letter)
+    builder.add_edge("cover_letter", END)
 
     return builder.compile()
 

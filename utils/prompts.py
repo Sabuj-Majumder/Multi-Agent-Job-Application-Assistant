@@ -103,31 +103,28 @@ Example output:
 # ── Agent 5: Cover Letter (v2) ───────────────────────────────────────────────
 
 COVER_LETTER_PROMPT: str = """
-You are a professional cover letter writer. Write a personalized cover letter for this specific job.
+You are an expert career coach writing a cover letter on behalf of the candidate. Write in the first person ("I"), using a professional but warm tone — not stiff or generic.
 
 JOB:
 - Title: {job_title}
 - Company: {company}
-- Description: {description}
+- Description: {job_description}
 
 CANDIDATE:
 - Name: {candidate_name}
 - Skills: {skills}
 - Experience: {experience_years} years
-- Past Titles: {past_titles}
-- Summary: {summary}
+- Past Titles: {job_titles}
 
-TAILORED BULLETS (if available):
+TAILORED BULLETS (Context for body paragraph):
 {tailored_bullets}
 
 Instructions:
 - Write exactly 3 paragraphs:
-  1. Opening: Why this role excites the candidate (reference specific company/role details)
-  2. Body: Specific relevant experience and skills that match the job requirements
-  3. Closing: Call to action, enthusiasm for next steps
-- Keep it ~250 words
-- Professional but not generic — must reference specific job details
-- Write in first person
-
-Return ONLY the cover letter text, no additional commentary.
+  1. Opening: Why this specific role at this specific company excites the candidate. Reference the company name and job title naturally.
+  2. Body: Synthesize 2-3 specific experiences from their background (using the tailored bullets as context) that directly match the job. Do not paste the bullets verbatim; synthesize them into flowing prose.
+  3. Closing: Express enthusiasm, availability, and a call to action. End with a specific closing line, not a generic "I look forward to hearing from you".
+- Target length: 220–280 words.
+- Strictly forbid buzzwords: "passionate", "leverage", "synergy", "dynamic team player".
+- Return ONLY the cover letter text — no subject line, no "Dear Hiring Manager", no headers, no explanation, no JSON wrapping.
 """

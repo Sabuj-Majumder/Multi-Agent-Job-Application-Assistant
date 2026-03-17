@@ -717,6 +717,38 @@ with tab_tailored:
                 
             st.caption("⚠️ Review all bullets carefully. Never submit AI-generated content without verifying accuracy.")
 
+            st.divider()
+            st.subheader("📝 Cover Letters")
+            
+            if not cover_letters:
+                st.info("Cover letters will appear here after a full pipeline run with a resume uploaded.")
+            else:
+                for job in top_jobs:
+                    if isinstance(job, Job):
+                        job_dict = job.model_dump()
+                    else:
+                        job_dict = job
+
+                    job_id = job_dict.get("id", "")
+                    title = job_dict.get("title", "Unknown")
+                    company = job_dict.get("company", "Unknown")
+
+                    cover_letter = cover_letters.get(job_id, "")
+                    if cover_letter:
+                        st.markdown(f"**{title} at {company}**")
+                        st.text_area(
+                            label="Cover Letter",
+                            value=cover_letter,
+                            height=300,
+                            label_visibility="hidden",
+                            key=f"cl_{job_id}"
+                        )
+                        st.caption(f"{len(cover_letter.split())} words")
+                        with st.expander("Show copyable text"):
+                            st.code(cover_letter)
+
+            st.caption("⚠️ Always personalize and review your cover letter before sending.")
+
 # ── Tab 5: Export ────────────────────────────────────────────────────────────
 
 with tab_export:

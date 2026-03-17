@@ -85,7 +85,7 @@ def score_single_job(
         "description": description_truncated,
         "skills": skills_str,
         "experience_years": experience_years,
-        "job_titles": job_titles,
+        "job_titles": past_titles,
     })
 
     return parse_score_response(response.content)
