@@ -4,6 +4,13 @@ Provides a single entry point for creating Groq-backed LLM instances
 with model selection logic based on task type.
 """
 
+# LangSmith Tracing Setup:
+# 1. Sign up free at https://smith.langchain.com
+# 2. Create a project called "job-assistant"
+# 3. Go to Settings → API Keys → Create API Key
+# 4. Add the keys to your .env file (see .env.example)
+# Tracing is automatically disabled if LANGCHAIN_API_KEY is not set
+
 import os
 
 from dotenv import load_dotenv
@@ -85,3 +92,24 @@ def get_long_context_llm(temperature: float = 0.1) -> ChatGroq:
         A configured ChatGroq instance with the long-context model.
     """
     return get_llm(model=LONG_CONTEXT_MODEL, temperature=temperature)
+
+
+def setup_tracing() -> bool:
+    """
+    Enables LangSmith tracing if LANGCHAIN_API_KEY is present in env.
+    Returns True if tracing is enabled, False if skipped.
+    LangChain reads these env vars automatically — no code changes
+    needed in agents.
+    """
+    api_key = os.getenv("LANGCHAIN_API_KEY")
+    if not api_key or api_key == "your_langsmith_api_key_here":
+        return False
+
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "job-assistant")
+    os.environ["LANGCHAIN_ENDPOINT"] = os.getenv(
+        "LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com"
+    )
+    return True
+
+setup_tracing()

@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 from pypdf import PdfReader
 
-from graph import pipeline
+from graph import run_pipeline
 from utils.state import AgentState, CandidateProfile, Job
 
 # ── Page Configuration ───────────────────────────────────────────────────────
@@ -263,6 +263,17 @@ with st.sidebar:
 
     st.divider()
 
+    from utils.llm import setup_tracing
+    tracing_enabled = setup_tracing()
+
+    if tracing_enabled:
+        st.sidebar.success("LangSmith tracing ON")
+        st.sidebar.caption("View traces at smith.langchain.com")
+    else:
+        st.sidebar.caption("LangSmith tracing OFF — add LANGCHAIN_API_KEY to .env to enable")
+
+    st.divider()
+
     # Free APIs section
     st.subheader("Free APIs Used")
     st.markdown(
@@ -395,7 +406,7 @@ with tab_search:
                 }
 
                 try:
-                    result = pipeline.invoke(initial_state)
+                    result = run_pipeline(initial_state)
 
                     # Convert Job objects for display if needed
                     jobs_data = result.get("jobs", [])

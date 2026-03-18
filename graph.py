@@ -12,6 +12,8 @@ from agents.resume_analyzer_agent import resume_analyzer_agent
 from agents.resume_tailor_agent import resume_tailor_agent
 from agents.cover_letter_agent import cover_letter_agent
 from utils.state import AgentState
+from utils.llm import setup_tracing
+from langsmith import traceable
 
 
 def should_run_resume_analyzer(state: AgentState) -> str:
@@ -102,3 +104,8 @@ def build_graph() -> StateGraph:
 
 # Module-level compiled pipeline — import and invoke this
 pipeline = build_graph()
+
+@traceable(name="job-assistant-pipeline")
+def run_pipeline(state):
+    """Traced wrapper around the full LangGraph pipeline."""
+    return pipeline.invoke(state)
