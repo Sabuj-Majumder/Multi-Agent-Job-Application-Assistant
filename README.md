@@ -31,7 +31,7 @@ START → Job Scraper → [conditional] → Resume Analyzer → END
 ### 1. Clone and install
 
 ```bash
-git clone <repo-url>
+git clone (https://github.com/Sabuj-Majumder/Multi-Agent-Job-Application-Assistant)
 cd job-assistant
 python -m venv venv
 
