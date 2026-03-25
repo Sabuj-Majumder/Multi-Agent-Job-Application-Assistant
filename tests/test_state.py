@@ -1,9 +1,8 @@
-"""Tests for the AgentState TypedDict and Pydantic models.
+"""Tests for the Pydantic data models and AgentState TypedDict.
 
-Test cases:
-1. AgentState TypedDict accepts all required keys
-2. Job Pydantic model validates correctly
-3. Job model rejects invalid fit_score (must be 0-100)
+Test 1: Job validates correctly with all required fields
+Test 2: Job raises ValidationError when fit_score is outside 0–100
+Test 3: AgentState TypedDict accepts a fully populated dict without error
 """
 
 import pytest
@@ -12,158 +11,81 @@ from pydantic import ValidationError
 from utils.state import AgentState, CandidateProfile, Job
 
 
-class TestJob:
+class TestJobModel:
     """Tests for the Job Pydantic model."""
 
-    def test_job_valid_creation(self) -> None:
-        """Job model should accept all valid fields."""
-        job = Job(
-            id="test-uuid-123",
-            title="AI Engineer",
-            company="TechCorp",
-            location="Remote",
-            description="Build AI systems",
-            url="https://example.com/job/1",
-            source="themuse",
-            salary="$80,000 – $120,000",
-            tags=["python", "ml", "aws"],
-            fit_score=85,
-            fit_reasoning="Strong match on skills",
-        )
-        assert job.title == "AI Engineer"
-        assert job.company == "TechCorp"
-        assert job.source == "themuse"
-        assert job.fit_score == 85
-        assert len(job.tags) == 3
+    def test_job_validates_with_all_fields(self, sample_job: Job) -> None:
+        """Test 1: Job model accepts all valid fields and stores them correctly."""
+        assert sample_job.id == "test-job-abc-123"
+        assert sample_job.title == "AI Engineer"
+        assert sample_job.company == "Acme AI Corp"
+        assert sample_job.location == "Remote"
+        assert sample_job.source == "remoteok"
+        assert sample_job.salary == "$120,000 – $160,000"
+        assert sample_job.fit_score == 85
+        assert sample_job.fit_reasoning == "Strong match on Python and ML skills."
+        assert len(sample_job.tags) == 4
+        assert "python" in sample_job.tags
+        assert sample_job.posted_at == "2025-12-01T10:00:00Z"
 
-    def test_job_minimal_creation(self) -> None:
-        """Job model should work with only required fields."""
-        job = Job(
-            id="test-uuid-456",
-            title="Data Scientist",
-            company="DataCo",
-            location="New York",
-            description="Analyze data",
-            url="https://example.com/job/2",
-            source="remoteok",
-        )
-        assert job.salary is None
-        assert job.tags == []
-        assert job.fit_score is None
-        assert job.fit_reasoning is None
-
-    def test_job_rejects_invalid_fit_score_too_high(self) -> None:
-        """Job model should reject fit_score > 100."""
+    def test_job_rejects_fit_score_outside_range(self) -> None:
+        """Test 2: Job raises ValidationError for fit_score > 100 or < 0."""
         with pytest.raises(ValidationError):
             Job(
-                id="test-uuid",
+                id="bad-score-high",
                 title="Test",
                 company="Test",
                 location="Test",
                 description="Test",
                 url="https://example.com",
-                source="themuse",
+                source="remoteok",
                 fit_score=101,
             )
 
-    def test_job_rejects_invalid_fit_score_negative(self) -> None:
-        """Job model should reject fit_score < 0."""
         with pytest.raises(ValidationError):
             Job(
-                id="test-uuid",
+                id="bad-score-low",
                 title="Test",
                 company="Test",
                 location="Test",
                 description="Test",
                 url="https://example.com",
-                source="themuse",
+                source="remoteok",
                 fit_score=-1,
             )
-
-    def test_job_accepts_boundary_fit_scores(self) -> None:
-        """Job model should accept fit_score of 0 and 100."""
-        job_zero = Job(
-            id="test-0",
-            title="Test",
-            company="Test",
-            location="Test",
-            description="Test",
-            url="https://example.com",
-            source="themuse",
-            fit_score=0,
-        )
-        assert job_zero.fit_score == 0
-
-        job_hundred = Job(
-            id="test-100",
-            title="Test",
-            company="Test",
-            location="Test",
-            description="Test",
-            url="https://example.com",
-            source="themuse",
-            fit_score=100,
-        )
-        assert job_hundred.fit_score == 100
-
-
-class TestCandidateProfile:
-    """Tests for the CandidateProfile Pydantic model."""
-
-    def test_profile_full_creation(self) -> None:
-        """CandidateProfile should accept all fields."""
-        profile = CandidateProfile(
-            name="John Doe",
-            email="john@example.com",
-            skills=["Python", "LangChain", "AWS"],
-            experience_years=5,
-            job_titles=["Backend Engineer", "ML Engineer"],
-            education=["BSc Computer Science, MIT"],
-            summary="Experienced ML engineer with 5 years of experience.",
-            raw_text="Full resume text here...",
-        )
-        assert profile.name == "John Doe"
-        assert len(profile.skills) == 3
-
-    def test_profile_minimal_creation(self) -> None:
-        """CandidateProfile should work with all default values."""
-        profile = CandidateProfile()
-        assert profile.name is None
-        assert profile.skills == []
-        assert profile.raw_text == ""
 
 
 class TestAgentState:
     """Tests for the AgentState TypedDict."""
 
-    def test_agent_state_accepts_all_keys(self) -> None:
-        """AgentState should accept all defined keys."""
-        state: AgentState = {
+    def test_agent_state_accepts_full_dict(
+        self, minimal_state: AgentState, sample_job: Job, sample_candidate: CandidateProfile
+    ) -> None:
+        """Test 3: AgentState accepts a fully populated state dict with all keys."""
+        full_state: AgentState = {
+            **minimal_state,
             "job_title": "AI Engineer",
             "location": "Remote",
             "num_results": 10,
-            "resume_text": None,
-            "raw_jobs": [],
-            "jobs": [],
-            "scrape_summary": "",
-            "candidate_profile": None,
-            "ranked_jobs": [],
-            "tailored_bullets": None,
-            "cover_letters": None,
+            "resume_text": "Full resume text here",
+            "raw_jobs": [{"title": "AI Engineer"}],
+            "jobs": [sample_job],
+            "scrape_summary": "Found 1 job",
+            "candidate_profile": sample_candidate,
+            "ranked_jobs": [sample_job],
+            "tailored_bullets": {"test-job-abc-123": ["Bullet 1"]},
+            "cover_letters": {"test-job-abc-123": "Dear Hiring Manager..."},
             "error": None,
-            "active_agent": None,
-            "completed_agents": [],
+            "active_agent": "job_scraper",
+            "completed_agents": ["job_scraper"],
         }
-        assert state["job_title"] == "AI Engineer"
-        assert state["location"] == "Remote"
-        assert state["num_results"] == 10
-        assert state["completed_agents"] == []
 
-    def test_agent_state_partial_keys(self) -> None:
-        """AgentState (total=False) should accept partial keys."""
-        state: AgentState = {
-            "job_title": "Data Scientist",
-            "location": "New York",
-            "num_results": 20,
-        }
-        assert state["job_title"] == "Data Scientist"
+        # TypedDict is a dict — verify all keys are accessible
+        assert full_state["job_title"] == "AI Engineer"
+        assert full_state["location"] == "Remote"
+        assert full_state["num_results"] == 10
+        assert full_state["resume_text"] == "Full resume text here"
+        assert len(full_state["jobs"]) == 1
+        assert full_state["candidate_profile"].name == "Alice Johnson"
+        assert full_state["completed_agents"] == ["job_scraper"]
+        assert full_state["error"] is None

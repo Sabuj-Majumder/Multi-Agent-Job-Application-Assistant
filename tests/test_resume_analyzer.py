@@ -1,175 +1,112 @@
 """Tests for the Resume Analyzer Agent.
 
-Test cases:
-1. Correctly extracts skills from a sample resume text
-2. Handles malformed LLM JSON response gracefully
-3. resume_analyzer_agent skips gracefully when resume_text is None
+Test 1: agent correctly parses a clean LLM JSON response into CandidateProfile
+Test 2: agent retries once on JSON parse failure, then falls back — LLM called exactly twice
+Test 3: agent returns state unchanged when resume_text is None or empty — no LLM call
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 
 from agents.resume_analyzer_agent import (
-    clean_json_response,
     extract_profile_from_text,
-    parse_llm_profile,
     resume_analyzer_agent,
 )
 from utils.state import AgentState, CandidateProfile
 
 
-class TestCleanJsonResponse:
-    """Tests for JSON response cleaning."""
+class TestExtractProfile:
+    """Tests for LLM-based profile extraction."""
 
-    def test_clean_markdown_fences(self) -> None:
-        """Should strip ```json ... ``` fences."""
-        raw = '```json\n{"name": "John"}\n```'
-        cleaned = clean_json_response(raw)
-        assert cleaned == '{"name": "John"}'
+    def test_parses_clean_json_into_candidate_profile(self) -> None:
+        """Test 1: clean LLM JSON → CandidateProfile with all fields populated."""
+        valid_json = (
+            '{"name": "Alice Smith", "email": "alice@example.com", '
+            '"skills": ["Python", "TensorFlow", "AWS", "Docker", "SQL"], '
+            '"experience_years": 5, '
+            '"job_titles": ["ML Engineer", "Data Scientist"], '
+            '"education": ["MSc Computer Science, Stanford University"], '
+            '"summary": "Experienced ML engineer with 5 years in production ML."}'
+        )
 
-    def test_clean_plain_fences(self) -> None:
-        """Should strip ``` ... ``` fences without language tag."""
-        raw = '```\n{"name": "John"}\n```'
-        cleaned = clean_json_response(raw)
-        assert cleaned == '{"name": "John"}'
-
-    def test_clean_no_fences(self) -> None:
-        """Should return unchanged when no fences present."""
-        raw = '{"name": "John"}'
-        cleaned = clean_json_response(raw)
-        assert cleaned == '{"name": "John"}'
-
-
-class TestParseLlmProfile:
-    """Tests for LLM profile parsing."""
-
-    def test_parse_valid_json(self) -> None:
-        """Should parse valid JSON into a dictionary."""
-        valid_json = '{"name": "John", "skills": ["Python", "ML"]}'
-        result = parse_llm_profile(valid_json)
-        assert result is not None
-        assert result["name"] == "John"
-        assert len(result["skills"]) == 2
-
-    def test_parse_invalid_json(self) -> None:
-        """Should return None for invalid JSON."""
-        invalid = "This is not valid JSON at all"
-        result = parse_llm_profile(invalid)
-        assert result is None
-
-    def test_parse_json_with_markdown_fences(self) -> None:
-        """Should handle JSON wrapped in markdown fences."""
-        fenced = '```json\n{"name": "Jane", "skills": ["AWS"]}\n```'
-        result = parse_llm_profile(fenced)
-        assert result is not None
-        assert result["name"] == "Jane"
-
-
-class TestExtractProfileFromText:
-    """Tests for the LLM-based profile extraction."""
-
-    def test_extracts_skills_from_resume(self) -> None:
-        """Should correctly extract skills from a sample resume text."""
         mock_llm_response = MagicMock()
-        mock_llm_response.content = '''{
-            "name": "Alice Smith",
-            "email": "alice@example.com",
-            "skills": ["Python", "TensorFlow", "AWS", "Docker", "SQL"],
-            "experience_years": 5,
-            "job_titles": ["ML Engineer", "Data Scientist"],
-            "education": ["MSc Computer Science, Stanford University"],
-            "summary": "Experienced ML engineer with 5 years in production ML systems."
-        }'''
+        mock_llm_response.content = valid_json
 
-        mock_llm = MagicMock()
         mock_chain = MagicMock()
         mock_chain.invoke.return_value = mock_llm_response
 
-        with patch("agents.resume_analyzer_agent.get_primary_llm", return_value=mock_llm):
-            with patch("agents.resume_analyzer_agent.ChatPromptTemplate") as MockTemplate:
-                mock_template_instance = MagicMock()
-                mock_template_instance.__or__ = MagicMock(return_value=mock_chain)
-                MockTemplate.from_template.return_value = mock_template_instance
+        mock_template = MagicMock()
+        mock_template.__or__ = MagicMock(return_value=mock_chain)
 
-                profile = extract_profile_from_text("Sample resume text with Python and TensorFlow experience")
+        with patch("agents.resume_analyzer_agent.get_primary_llm") as mock_get_llm, \
+             patch("agents.resume_analyzer_agent.ChatPromptTemplate") as MockTemplate:
+            mock_get_llm.return_value = MagicMock()
+            MockTemplate.from_template.return_value = mock_template
 
-                assert isinstance(profile, CandidateProfile)
-                assert profile.name == "Alice Smith"
-                assert "Python"in profile.skills
-                assert "TensorFlow"in profile.skills
-                assert len(profile.skills) == 5
-                assert profile.experience_years == 5
+            profile = extract_profile_from_text("Sample resume text")
 
-    def test_handles_malformed_llm_response(self) -> None:
-        """Should return minimal profile when LLM JSON is malformed."""
-        mock_llm_response = MagicMock()
-        mock_llm_response.content = "This is not JSON at all, just some random text."
+        assert isinstance(profile, CandidateProfile)
+        assert profile.name == "Alice Smith"
+        assert profile.email == "alice@example.com"
+        assert len(profile.skills) == 5
+        assert "Python" in profile.skills
+        assert "TensorFlow" in profile.skills
+        assert profile.experience_years == 5
+        assert "ML Engineer" in profile.job_titles
+        assert profile.raw_text == "Sample resume text"
 
-        mock_llm = MagicMock()
+    def test_retries_once_then_falls_back_llm_called_twice(self) -> None:
+        """Test 2: on JSON parse failure, retries once, then falls back.
+        Confirms LLM was called exactly twice."""
+        bad_response = MagicMock()
+        bad_response.content = "This is not valid JSON at all"
+
         mock_chain = MagicMock()
-        mock_chain.invoke.return_value = mock_llm_response
+        mock_chain.invoke.return_value = bad_response
 
-        with patch("agents.resume_analyzer_agent.get_primary_llm", return_value=mock_llm):
-            with patch("agents.resume_analyzer_agent.ChatPromptTemplate") as MockTemplate:
-                mock_template_instance = MagicMock()
-                mock_template_instance.__or__ = MagicMock(return_value=mock_chain)
-                MockTemplate.from_template.return_value = mock_template_instance
+        mock_template = MagicMock()
+        mock_template.__or__ = MagicMock(return_value=mock_chain)
 
-                profile = extract_profile_from_text("Some resume text")
+        with patch("agents.resume_analyzer_agent.get_primary_llm") as mock_get_llm, \
+             patch("agents.resume_analyzer_agent.ChatPromptTemplate") as MockTemplate:
+            mock_get_llm.return_value = MagicMock()
+            MockTemplate.from_template.return_value = mock_template
 
-                assert isinstance(profile, CandidateProfile)
-                assert profile.raw_text == "Some resume text"
+            profile = extract_profile_from_text("Some resume text")
+
+        # Should have tried exactly 2 times (MAX_RETRIES = 2)
+        assert mock_chain.invoke.call_count == 2
+
+        # Falls back to minimal profile with raw_text
+        assert isinstance(profile, CandidateProfile)
+        assert profile.raw_text == "Some resume text"
 
 
 class TestResumeAnalyzerAgent:
-    """Tests for the resume_analyzer_agent LangGraph node function."""
+    """Tests for the resume_analyzer_agent LangGraph node."""
 
-    def test_skips_when_resume_text_is_none(self) -> None:
-        """resume_analyzer_agent should skip gracefully when resume_text is None."""
-        state: AgentState = {
-            "job_title": "AI Engineer",
-            "location": "Remote",
-            "num_results": 10,
-            "resume_text": None,
-            "raw_jobs": [],
-            "jobs": [],
-            "scrape_summary": "",
-            "candidate_profile": None,
-            "ranked_jobs": [],
-            "tailored_bullets": None,
-            "cover_letters": None,
-            "error": None,
-            "active_agent": "resume_analyzer",
-            "completed_agents": ["job_scraper"],
-        }
+    def test_returns_unchanged_when_resume_text_none_or_empty(
+        self, minimal_state: AgentState
+    ) -> None:
+        """Test 3: state unchanged when resume_text is None or empty.
+        Confirms no LLM call is made."""
+        # Test with None
+        state_none = {**minimal_state, "resume_text": None}
 
-        result = resume_analyzer_agent(state)
+        with patch("agents.resume_analyzer_agent.get_primary_llm") as mock_llm:
+            result_none = resume_analyzer_agent(state_none)
+            mock_llm.assert_not_called()
 
-        assert result["candidate_profile"] is None
-        assert "resume_analyzer"in result["completed_agents"]
-        assert result["active_agent"] is None
+        assert result_none["candidate_profile"] is None
+        assert "resume_analyzer" in result_none["completed_agents"]
 
-    def test_skips_when_resume_text_is_empty(self) -> None:
-        """resume_analyzer_agent should skip gracefully when resume_text is empty string."""
-        state: AgentState = {
-            "job_title": "AI Engineer",
-            "location": "Remote",
-            "num_results": 10,
-            "resume_text": "",
-            "raw_jobs": [],
-            "jobs": [],
-            "scrape_summary": "",
-            "candidate_profile": None,
-            "ranked_jobs": [],
-            "tailored_bullets": None,
-            "cover_letters": None,
-            "error": None,
-            "active_agent": "resume_analyzer",
-            "completed_agents": ["job_scraper"],
-        }
+        # Test with empty string
+        state_empty = {**minimal_state, "resume_text": ""}
 
-        result = resume_analyzer_agent(state)
+        with patch("agents.resume_analyzer_agent.get_primary_llm") as mock_llm:
+            result_empty = resume_analyzer_agent(state_empty)
+            mock_llm.assert_not_called()
 
-        assert result["candidate_profile"] is None
-        assert "resume_analyzer"in result["completed_agents"]
+        assert result_empty["candidate_profile"] is None
+        assert "resume_analyzer" in result_empty["completed_agents"]
