@@ -23,8 +23,8 @@ class Job(BaseModel):
         source: Origin API — "remoteok", "themuse", or "arbeitnow".
         salary: Formatted salary range string, e.g. "$80,000 – $120,000".
         tags: Tech stack tags, e.g. ["python", "aws", "docker"].
-        fit_score: 0–100, filled by Fit Scorer Agent (v2).
-        fit_reasoning: LLM explanation of score (v2).
+        fit_score: 0–100, filled by the Fit Scorer Agent.
+        fit_reasoning: LLM explanation of the fit score.
     """
 
     id: str
@@ -81,9 +81,9 @@ class AgentState(TypedDict, total=False):
         jobs: Parsed, deduplicated Job objects.
         scrape_summary: Human-readable summary of scrape results.
         candidate_profile: Structured profile from Resume Analyzer.
-        ranked_jobs: Jobs sorted by fit_score descending (v2).
-        tailored_bullets: job_id → rewritten bullets list (v2).
-        cover_letters: job_id → cover letter string (v2).
+        ranked_jobs: Jobs sorted by fit_score descending.
+        tailored_bullets: job_id → rewritten bullets list.
+        cover_letters: job_id → cover letter string.
 
     Pipeline metadata:
         error: Set by any agent on failure.

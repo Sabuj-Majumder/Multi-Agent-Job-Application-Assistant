@@ -1,11 +1,9 @@
-"""Resume Tailor Agent — rewrites resume bullets to match top jobs (v2).
+"""Resume Tailor Agent — rewrites resume bullets to match top jobs.
 
 LangGraph node name: "resume_tailor"
 Reads from state: ranked_jobs (top 3), candidate_profile
 Writes to state: tailored_bullets — dict of {job_id: [bullet_1, bullet_2, ...]}
 Uses LLM: llama-3.3-70b-versatile
-
-Status: v2 — not yet implemented.
 """
 
 import json

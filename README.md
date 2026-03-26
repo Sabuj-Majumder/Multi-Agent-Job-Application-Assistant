@@ -2,19 +2,20 @@
 
 A **multi-agent AI system** built with LangGraph that autonomously finds job listings, analyzes resumes, scores job-candidate fit, tailors resume bullet points, and writes personalized cover letters — powered entirely by free-tier APIs.
 
-##  Architecture
+## Architecture
 
 ```
-START → Job Scraper → [conditional] → Resume Analyzer → END
+START -> Job Scraper -> [resume?] -> Resume Analyzer -> [profile?] -> Fit Scorer
+      -> [ranked?] -> Resume Tailor -> [bullets?] -> Cover Letter -> END
 ```
 
 - **Job Scraper Agent** — Fetches from 3 free job APIs (RemoteOK, The Muse, Arbeitnow), normalizes and deduplicates results
 - **Resume Analyzer Agent** — Extracts structured candidate profile from uploaded PDF using LLM
-- **Fit Scorer Agent** (v2) — Scores each job 0–100 against candidate profile
-- **Resume Tailor Agent** (v2) — Rewrites resume bullets to match top jobs
-- **Cover Letter Agent** (v2) — Generates personalized cover letters per job
+- **Fit Scorer Agent** — Scores each job 0-100 against candidate profile
+- **Resume Tailor Agent** — Rewrites resume bullets to match top jobs
+- **Cover Letter Agent** — Generates personalized cover letters per job
 
-##  Tech Stack
+## Tech Stack
 
 | Technology | Purpose |
 |-----------|---------|
@@ -25,8 +26,9 @@ START → Job Scraper → [conditional] → Resume Analyzer → END
 | **structlog** | Structured JSON logging |
 | **pypdf** | PDF resume text extraction |
 | **pytest** | Unit testing with mocked HTTP |
+| **LangSmith** | Optional observability and tracing |
 
-##  Setup
+## Setup
 
 ### 1. Clone and install
 
@@ -63,8 +65,8 @@ Works immediately.
 #### Arbeitnow (No Key Needed)
 Works immediately.
 
-#### RemoteOK
-No API key needed! Works immediately.
+#### RemoteOK (No Key Needed)
+Works immediately.
 
 ### 3. Run the app
 
@@ -74,7 +76,7 @@ streamlit run app.py
 
 Opens at http://localhost:8501
 
-##  Running Tests
+## Running Tests
 
 ```bash
 # Run all tests
@@ -87,57 +89,65 @@ pytest tests/ -v --tb=short
 pytest tests/test_job_scraper.py -v
 ```
 
-##  Project Structure
+## Project Structure
 
 ```
-├── app.py                      # Streamlit UI entry point
-├── graph.py                    # LangGraph pipeline definition
-├── requirements.txt            # Python dependencies
-├── .env.example                # Environment variable template
+├── app.py                        # Streamlit UI entry point
+├── graph.py                      # LangGraph pipeline definition
+├── requirements.txt              # Python dependencies
+├── .env.example                  # Environment variable template
 ├── agents/
-│   ├── job_scraper_agent.py    # Agent 1: 3-source job fetcher
-│   ├── resume_analyzer_agent.py # Agent 2: LLM-based resume parsing
-│   ├── fit_scorer_agent.py     # Agent 3: Job-fit scoring (v2 stub)
-│   ├── resume_tailor_agent.py  # Agent 4: Resume bullet rewriting (v2 stub)
-│   └── cover_letter_agent.py   # Agent 5: Cover letter generation (v2 stub)
+│   ├── job_scraper_agent.py      # Agent 1: 3-source job fetcher
+│   ├── resume_analyzer_agent.py  # Agent 2: LLM-based resume parsing
+│   ├── fit_scorer_agent.py       # Agent 3: Job-fit scoring
+│   ├── resume_tailor_agent.py    # Agent 4: Resume bullet rewriting
+│   └── cover_letter_agent.py     # Agent 5: Cover letter generation
 ├── utils/
-│   ├── state.py                # Pydantic models + AgentState TypedDict
-│   ├── llm.py                  # Groq LLM factory
-│   ├── prompts.py              # All LLM prompt templates
-│   └── logger.py               # structlog configuration
+│   ├── state.py                  # Pydantic models + AgentState TypedDict
+│   ├── llm.py                    # Groq LLM factory + LangSmith tracing
+│   ├── prompts.py                # All LLM prompt templates
+│   └── logger.py                 # structlog configuration
 ├── tests/
-│   ├── test_state.py           # Data model validation tests
-│   ├── test_job_scraper.py     # Scraper tests with mocked HTTP
-│   ├── test_resume_analyzer.py # Resume analyzer tests
-│   └── fixtures/               # Test data files
+│   ├── conftest.py               # Shared pytest fixtures
+│   ├── test_state.py             # Data model validation tests
+│   ├── test_job_scraper.py       # Scraper tests with mocked HTTP
+│   ├── test_resume_analyzer.py   # Resume analyzer tests
+│   ├── test_fit_scorer.py        # Fit scorer tests
+│   ├── test_resume_tailor.py     # Resume tailor tests
+│   ├── test_cover_letter.py      # Cover letter tests
+│   ├── test_graph.py             # Pipeline integration tests
+│   └── fixtures/                 # Test data files
 └── docs/
-    └── architecture.md         # System design documentation
+    ├── architecture.md           # System design documentation
+    └── observability.md          # LangSmith tracing guide
 ```
 
-##  Deployment
+## Deployment
 
 ### Streamlit Cloud (Recommended, Free)
 1. Push repo to GitHub (`.env` is gitignored)
-2. Go to https://share.streamlit.io → "New app" → select your repo
+2. Go to https://share.streamlit.io and select "New app" then select your repo
 3. Set `app.py` as entry point
-4. Add API keys in the "Secrets"section
-5. Deploy — get a public URL instantly
+4. Add API keys in the "Secrets" section
+5. Deploy to get a public URL instantly
 
 ### Railway (Alternative, Free Tier)
 1. Connect GitHub repo to Railway
 2. Set start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
 3. Add env vars in Railway dashboard
 
-##  Roadmap
+## Features
 
 - [x] Job Scraper Agent (3 API sources)
 - [x] Resume Analyzer Agent (LLM extraction)
-- [ ] Fit Scorer Agent (v2)
-- [ ] Resume Tailor Agent (v2)
-- [ ] Cover Letter Agent (v2)
-- [ ] Batch mode with LangGraph map-reduce
-- [ ] Job Application Tracker with SQLite
+- [x] Fit Scorer Agent (job-candidate scoring)
+- [x] Resume Tailor Agent (bullet point rewriting)
+- [x] Cover Letter Agent (personalized generation)
+- [x] Job Application Tracker (in-session tracking)
+- [x] LangSmith Observability (optional tracing)
+- [x] Export to JSON/CSV
+- [x] Date-based job filtering
 
-##  License
+## License
 
 MIT

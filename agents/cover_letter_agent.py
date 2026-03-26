@@ -1,4 +1,4 @@
-"""Cover Letter Agent — generates personalized cover letters for top jobs (v2).
+"""Cover Letter Agent — generates personalized cover letters for top jobs.
 
 LangGraph node name: "cover_letter"
 Reads from state: ranked_jobs (top 3), candidate_profile, tailored_bullets

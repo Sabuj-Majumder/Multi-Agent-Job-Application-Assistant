@@ -6,5 +6,6 @@ __pycache__/
 dist/
 .venv/
 venv/
+.coverage
 *.pdf        # Do not commit user resumes
 PROJECT_SPEC.md

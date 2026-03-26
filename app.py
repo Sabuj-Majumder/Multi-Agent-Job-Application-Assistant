@@ -19,17 +19,17 @@ from utils.state import AgentState, CandidateProfile, Job
 
 st.set_page_config(
     page_title="Job Application Assistant",
-        layout="wide",
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ── Session State Initialization ─────────────────────────────────────────────
 
-if "pipeline_result"not in st.session_state:
+if "pipeline_result" not in st.session_state:
     st.session_state["pipeline_result"] = None
-if "resume_text"not in st.session_state:
+if "resume_text" not in st.session_state:
     st.session_state["resume_text"] = None
-if "has_run"not in st.session_state:
+if "has_run" not in st.session_state:
     st.session_state["has_run"] = False
 if "job_tracker" not in st.session_state:
     st.session_state["job_tracker"] = {}
@@ -218,20 +218,20 @@ def jobs_to_json(jobs: List[Dict[str, Any]]) -> str:
     return json.dumps(serializable, indent=2, default=str)
 
 
-def get_score_emoji(score: int) -> str:
-    """Get emoji indicator for a fit score value.
+def get_score_label(score: int) -> str:
+    """Get text indicator for a fit score value.
 
     Args:
         score: Fit score integer 0-100.
 
     Returns:
-        Emoji string: \"🟢\" for ≥70, \"🟡\" for 40-69, \"🔴\" for <40.
+        Label string: "High" for >=70, "Medium" for 40-69, "Low" for <40.
     """
     if score >= 70:
-        return "🟢"
+        return "High"
     elif score >= 40:
-        return "🟡"
-    return "🔴"
+        return "Medium"
+    return "Low"
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -243,9 +243,9 @@ with st.sidebar:
     agents_info = [
         ("Job Scraper", "Fetches from 3 APIs"),
         ("Resume Analyzer", "Extracts profile from PDF"),
-        ("Fit Scorer", "Scores job-candidate fit (v2)"),
-        ("Resume Tailor", "Rewrites resume bullets (v2)"),
-        ("Cover Letter", "Generates cover letters (v2)"),
+        ("Fit Scorer", "Scores job-candidate fit"),
+        ("Resume Tailor", "Rewrites resume bullets"),
+        ("Cover Letter", "Generates cover letters"),
     ]
 
     completed = []
@@ -301,11 +301,11 @@ with st.sidebar:
 
     tracker_state = st.session_state.get("job_tracker", {})
     if tracker_state:
-        st.subheader("📌 Tracker Summary")
+        st.subheader("Tracker Summary")
         saved_count = sum(1 for status in tracker_state.values() if status == "saved")
         applied_count = sum(1 for status in tracker_state.values() if status == "applied")
         rejected_count = sum(1 for status in tracker_state.values() if status == "rejected")
-        st.markdown(f"⭐ Saved: {saved_count} &nbsp; ✅ Applied: {applied_count} &nbsp; ❌ Rejected: {rejected_count}")
+        st.markdown(f"Saved: {saved_count} &nbsp; Applied: {applied_count} &nbsp; Rejected: {rejected_count}")
         st.divider()
 
     st.caption("Built with LangGraph · Groq · Streamlit")
@@ -318,7 +318,7 @@ st.title("Job Application Assistant")
 st.caption("Multi-agent AI system for autonomous job searching and resume analysis")
 
 tab_search, tab_results, tab_tracker, tab_tailored, tab_export = st.tabs(
-    ["Search", "Results", "📌 Tracker", "Tailored Materials (v2)", "Export"]
+    ["Search", "Results", "Tracker", "Tailored Materials", "Export"]
 )
 
 # ── Tab 1: Search ────────────────────────────────────────────────────────────
@@ -337,7 +337,7 @@ with tab_search:
         location = st.text_input(
             "Location",
             placeholder="Remote, New York, London",
-            help="Enter location or 'Remote'for remote jobs",
+            help="Enter location or 'Remote' for remote jobs",
         )
         date_posted = st.selectbox(
             "Date Posted",
@@ -553,7 +553,7 @@ with tab_results:
                         source = job_dict.get("source", "unknown")
                         st.markdown(f"**Source:** `{source}`")
                         
-                        st.caption(f"🕐 {human_readable_date(job_dict.get('posted_at'))}")
+                        st.caption(human_readable_date(job_dict.get('posted_at')))
 
                         url = job_dict.get("url", "")
                         if url:
@@ -562,8 +562,8 @@ with tab_results:
                     # Fit score display
                     fit_score = job_dict.get("fit_score")
                     if fit_score is not None:
-                        emoji = get_score_emoji(fit_score)
-                        st.markdown(f"**Fit Score:** {emoji} {fit_score}/100")
+                        label = get_score_label(fit_score)
+                        st.markdown(f"**Fit Score:** {fit_score}/100 ({label})")
                         st.progress(fit_score / 100)
                         reasoning = job_dict.get("fit_reasoning", "")
                         if reasoning:
@@ -582,23 +582,23 @@ with tab_results:
                     status = st.session_state["job_tracker"].get(job_id, "none")
                     
                     if status == "saved":
-                        st.markdown("🟡 Saved")
+                        st.markdown("**Status:** Saved")
                     elif status == "applied":
-                        st.markdown("🟢 Applied")
+                        st.markdown("**Status:** Applied")
                     elif status == "rejected":
-                        st.markdown("🔴 Rejected")
+                        st.markdown("**Status:** Rejected")
                         
                     btn_col1, btn_col2, btn_col3, _ = st.columns([1, 1, 1, 3])
                     with btn_col1:
-                        if st.button("⭐ Save", key=f"save_{job_id}", type="primary" if status == "saved" else "secondary"):
+                        if st.button("Save", key=f"save_{job_id}", type="primary" if status == "saved" else "secondary"):
                             st.session_state["job_tracker"][job_id] = "saved"
                             st.rerun()
                     with btn_col2:
-                        if st.button("✅ Applied", key=f"applied_{job_id}", type="primary" if status == "applied" else "secondary"):
+                        if st.button("Applied", key=f"applied_{job_id}", type="primary" if status == "applied" else "secondary"):
                             st.session_state["job_tracker"][job_id] = "applied"
                             st.rerun()
                     with btn_col3:
-                        if st.button("❌ Reject", key=f"reject_{job_id}", type="primary" if status == "rejected" else "secondary"):
+                        if st.button("Reject", key=f"reject_{job_id}", type="primary" if status == "rejected" else "secondary"):
                             st.session_state["job_tracker"][job_id] = "rejected"
                             st.rerun()
         else:
@@ -639,9 +639,9 @@ with tab_tracker:
             elif status == "rejected": rejected_jobs.append(job_data)
             
         col1, col2, col3 = st.columns(3)
-        col1.metric("⭐ Saved", len(saved_jobs))
-        col2.metric("✅ Applied", len(applied_jobs))
-        col3.metric("❌ Rejected", len(rejected_jobs))
+        col1.metric("Saved", len(saved_jobs))
+        col2.metric("Applied", len(applied_jobs))
+        col3.metric("Rejected", len(rejected_jobs))
         
         st.divider()
         
@@ -681,11 +681,11 @@ with tab_tracker:
             render_job_table(rejected_jobs, "No jobs in this category yet.")
             
         st.divider()
-        if st.button("🗑️ Clear All Tracking Data", type="secondary"):
+        if st.button("Clear All Tracking Data", type="secondary"):
             st.session_state["job_tracker"] = {}
             st.rerun()
 
-# ── Tab 4: Tailored Materials (v2) ───────────────────────────────────────────
+# ── Tab 4: Tailored Materials ─────────────────────────────────────────────────
 
 with tab_tailored:
     if not st.session_state.get("has_run"):
@@ -721,15 +721,15 @@ with tab_tailored:
                             st.markdown(f"{j}. {bullet}")
                         
                         bullet_text = "\n".join(f"{j}. {b}" for j, b in enumerate(bullets, 1))
-                        if st.button("📋 Copy All Bullets", key=f"copy_{job_id}"):
+                        if st.button("Copy All Bullets", key=f"copy_{job_id}"):
                             st.code(bullet_text)
                     else:
                         st.warning("Failed to generate tailored bullets for this job.")
                 
-            st.caption("⚠️ Review all bullets carefully. Never submit AI-generated content without verifying accuracy.")
+            st.caption("Review all bullets carefully. Never submit AI-generated content without verifying accuracy.")
 
             st.divider()
-            st.subheader("📝 Cover Letters")
+            st.subheader("Cover Letters")
             
             if not cover_letters:
                 st.info("Cover letters will appear here after a full pipeline run with a resume uploaded.")
@@ -758,7 +758,7 @@ with tab_tailored:
                         with st.expander("Show copyable text"):
                             st.code(cover_letter)
 
-            st.caption("⚠️ Always personalize and review your cover letter before sending.")
+            st.caption("Always personalize and review your cover letter before sending.")
 
 # ── Tab 5: Export ────────────────────────────────────────────────────────────
 
@@ -808,12 +808,6 @@ with tab_export:
                         mime="text/plain",
                         use_container_width=True,
                     )
-                else:
-                    st.button(
-                        "Cover Letters (v2)",
-                        disabled=True,
-                        use_container_width=True,
-                        help="Cover letter export will be available in v2",
-                    )
+
         else:
             st.warning("No jobs to export. Run a search first.")

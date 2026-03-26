@@ -19,14 +19,19 @@ This project implements a **multi-agent AI pipeline** using LangGraph that auton
 ┌─────────────────────────────────────────────────────────────────┐
 │                   LangGraph Pipeline (graph.py)                  │
 │                                                                  │
-│  START ──→ job_scraper ──→ [conditional] ──→ resume_analyzer    │
-│                                │                    │            │
-│                                │ (no resume)        │            │
-│                                ▼                    ▼            │
-│                               END                  END           │
-│                                                                  │
-│  v2 additions:                                                   │
-│  ... ──→ fit_scorer ──→ resume_tailor ──→ cover_letter ──→ END  │
+│  START ──→ job_scraper ──→ [resume?] ──→ resume_analyzer        │
+│                                               │                  │
+│                                   [profile?]  │                  │
+│                                               ▼                  │
+│                                          fit_scorer              │
+│                                               │                  │
+│                                   [ranked?]   │                  │
+│                                               ▼                  │
+│                                         resume_tailor            │
+│                                               │                  │
+│                                   [bullets?]  │                  │
+│                                               ▼                  │
+│                                         cover_letter ──→ END    │
 └─────────────────────────────────────────────────────────────────┘
                            │
                            ▼
@@ -37,15 +42,19 @@ This project implements a **multi-agent AI pipeline** using LangGraph that auton
 │  │ job_title  │  │  jobs            │  │ error                 │ │
 │  │ location   │  │  candidate_prof  │  │ active_agent          │ │
 │  │ resume_txt │  │  ranked_jobs     │  │ completed_agents      │ │
+│  │            │  │  tailored_bullets│  │                       │ │
+│  │            │  │  cover_letters   │  │                       │ │
 │  └───────────┘  └─────────────────┘  └───────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
+```
 
 ## External APIs
 
 | API       | Purpose                    | Auth Required |
 |-----------|----------------------------|---------------|
-| The Muse  | Job aggregation            | Yes (free)    |
-| Arbeitnow | Job aggregation            | Yes (free)    |
+| RemoteOK  | Remote job aggregation     | No            |
+| The Muse  | Job aggregation            | No            |
+| Arbeitnow | Job aggregation            | No            |
 | Groq      | LLM inference (LLaMA 3.3) | Yes (free)    |
 
 ## Tech Stack
@@ -56,4 +65,4 @@ This project implements a **multi-agent AI pipeline** using LangGraph that auton
 - **UI:** Streamlit
 - **Logging:** structlog (JSON)
 - **Testing:** pytest with mocked HTTP
-```
+- **Observability:** LangSmith (optional)

@@ -41,7 +41,7 @@ RESUME:
 {resume_text}
 """
 
-# ── Agent 3: Fit Scorer (v2) ────────────────────────────────────────────────
+# ── Agent 3: Fit Scorer ─────────────────────────────────────────────────────
 
 FIT_SCORER_PROMPT: str = """
 You are a job-fit scoring expert. Score how well this candidate matches the job.
@@ -71,7 +71,7 @@ Score rubric:
 Return ONLY the JSON, no explanation, no markdown fences.
 """
 
-# ── Agent 4: Resume Tailor (v2) ──────────────────────────────────────────────
+# ── Agent 4: Resume Tailor ───────────────────────────────────────────────────
 
 RESUME_TAILOR_PROMPT: str = """
 You are an expert technical resume writer. Rewrite the candidate's experience as 5 bullet points tailored to this specific job.
@@ -100,7 +100,7 @@ Example output:
 """
 
 
-# ── Agent 5: Cover Letter (v2) ───────────────────────────────────────────────
+# ── Agent 5: Cover Letter ────────────────────────────────────────────────────
 
 COVER_LETTER_PROMPT: str = """
 You are an expert career coach writing a cover letter on behalf of the candidate. Write in the first person ("I"), using a professional but warm tone — not stiff or generic.
